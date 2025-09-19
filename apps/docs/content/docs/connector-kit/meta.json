@@ -1,9 +1,12 @@
 {
-  "title": "Connector Kit",
-  "defaultOpen": true,
+  "title": "CONNECTOR-KIT 0.0.0",
+  "defaultOpen": false,
   "pages": [
     "introduction",
-    "try-it-out"
+    "getting-started", 
+    "try-it-out",
+    "customization",
+    "advanced",
+    "api-reference"
   ]
 }
-  

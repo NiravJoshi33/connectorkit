@@ -1,0 +1,164 @@
+---
+title: API Reference
+description: Complete API reference for ConnectorKit components and utilities
+---
+
+# API Reference
+
+Complete reference for all ConnectorKit APIs, components, and utilities.
+
+## Components
+
+### ConnectButton
+
+The main wallet connection component with built-in modal and state management.
+
+```tsx
+import { ConnectButton } from '@connectorkit/connector-kit'
+
+<ConnectButton 
+  size="default"     // "small" | "default" | "large"
+  variant="primary"  // "primary" | "secondary" | "outline"
+  showBalance={true} // Show wallet balance when connected
+/>
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `size` | `"small" \| "default" \| "large"` | `"default"` | Button size |
+| `variant` | `"primary" \| "secondary" \| "outline"` | `"primary"` | Button variant |
+| `showBalance` | `boolean` | `false` | Show balance when connected |
+
+### AppProvider
+
+Root provider that manages wallet connections and configuration.
+
+```tsx
+import { AppProvider } from '@connectorkit/connector-kit'
+
+<AppProvider connectorConfig={config} mobile={mobileConfig}>
+  {children}
+</AppProvider>
+```
+
+**Props:**
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `connectorConfig` | `ConnectorConfig` | ✓ | Main configuration object |
+| `mobile` | `MobileConfig` | ✗ | Mobile wallet adapter config |
+
+## Configuration Objects
+
+### ConnectorConfig
+
+```tsx
+interface ConnectorConfig {
+  appName: string
+  appUrl: string
+  network: 'devnet' | 'testnet' | 'mainnet-beta'
+  enableMobile?: boolean
+  wallets?: WalletAdapter[]
+  theme?: ThemeConfig
+}
+```
+
+### ArcConfig
+
+```tsx
+interface ArcConfig {
+  network: 'devnet' | 'testnet' | 'mainnet'
+  rpcUrl: string
+  commitment?: Commitment
+  autoConnect?: boolean
+  providers?: Provider[]
+  onConnect?: (publicKey: PublicKey) => void
+  onDisconnect?: () => void
+  onError?: (error: Error) => void
+}
+```
+
+## Utility Functions
+
+### getDefaultConfig
+
+Creates a default connector configuration.
+
+```tsx
+import { getDefaultConfig } from '@connectorkit/connector-kit'
+
+const config = getDefaultConfig({
+  appName: 'My App',
+  appUrl: 'https://myapp.com',
+  network: 'mainnet-beta',
+  enableMobile: true,
+})
+```
+
+### getDefaultMobileConfig
+
+Creates default mobile wallet adapter configuration.
+
+```tsx
+import { getDefaultMobileConfig } from '@connectorkit/connector-kit'
+
+const mobileConfig = getDefaultMobileConfig({
+  appName: 'My App',
+  appUrl: 'https://myapp.com',
+  network: 'mainnet-beta',
+})
+```
+
+## Hooks Integration
+
+ConnectorKit integrates seamlessly with `@connectorkit/hooks`:
+
+```tsx
+import { useWalletAddress, useBalance } from '@connectorkit/hooks'
+import { ConnectButton } from '@connectorkit/connector-kit'
+
+function MyComponent() {
+  const address = useWalletAddress()
+  const { data: balance } = useBalance()
+  
+  return (
+    <div>
+      <ConnectButton />
+      {address && (
+        <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+      )}
+    </div>
+  )
+}
+```
+
+## TypeScript Support
+
+Full TypeScript support with proper type definitions:
+
+```tsx
+import type { 
+  ConnectorConfig,
+  ArcConfig,
+  MobileConfig,
+  ThemeConfig
+} from '@connectorkit/connector-kit'
+```
+
+## Error Types
+
+```tsx
+interface ConnectorError extends Error {
+  code: string
+  details?: unknown
+}
+
+// Common error codes:
+// - 'wallet_not_found'
+// - 'user_rejected' 
+// - 'insufficient_funds'
+// - 'transaction_failed'
+// - 'network_error'
+```

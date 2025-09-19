@@ -1,13 +1,13 @@
-{   
-    "title": "Solana",
-    "defaultOpen": false,
-    "pages": [
-      "hooks",
-      "use-balance",
-      "use-airdrop", 
-      "use-cluster",
-      "use-wallet-address",
-      "use-transaction",
-      "use-swap"
-    ]
-  }
+{
+  "title": "HOOKS 0.0.0",
+  "defaultOpen": true,
+  "pages": [
+    "hooks",
+    "use-balance",
+    "use-airdrop",
+    "use-cluster", 
+    "use-wallet-address",
+    "use-transaction",
+    "use-swap"
+  ]
+}
