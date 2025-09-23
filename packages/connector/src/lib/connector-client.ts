@@ -18,7 +18,7 @@ export type ModalRoute = (typeof modalRoutes)[keyof typeof modalRoutes]
 // Route validation system inspired by ConnectKit
 export const safeRoutes = {
 	disconnected: [modalRoutes.WALLETS, modalRoutes.ABOUT] as const,
-	connected: [modalRoutes.PROFILE, modalRoutes.ACCOUNT_SETTINGS, modalRoutes.NETWORK_SETTINGS, modalRoutes.ABOUT, modalRoutes.SETTINGS] as const,
+	connected: [modalRoutes.WALLETS, modalRoutes.PROFILE, modalRoutes.ACCOUNT_SETTINGS, modalRoutes.NETWORK_SETTINGS, modalRoutes.ABOUT, modalRoutes.SETTINGS] as const,
 } as const
 
 /**
@@ -372,8 +372,10 @@ export class ConnectorClient {
 	setModalOpen(open: boolean, route?: ModalRoute): void {
 		const targetRoute = route || (open ? (this.state.connected ? modalRoutes.PROFILE : modalRoutes.WALLETS) : this.state.modalRoute as ModalRoute)
 		const validatedRoute = validateRoute(targetRoute, this.state.connected)
+		
 		// Avoid redundant updates
 		if (this.state.modalOpen === open && this.state.modalRoute === validatedRoute) return
+		
 		this.state = { 
 			...this.state, 
 			modalOpen: open,

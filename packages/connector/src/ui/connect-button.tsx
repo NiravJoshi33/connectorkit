@@ -9,7 +9,8 @@ import React, {
   useDeferredValue,
   useCallback,
   startTransition,
-  useSyncExternalStore
+  useSyncExternalStore,
+  useId
 } from 'react'
 import { useConnector } from './connector-provider'
 import { useModal } from '../hooks'
@@ -20,6 +21,7 @@ import {
   DropdownItem
 } from '@connectorkit/ui-primitives'
 import { ConnectModal } from './connect-modal'
+import { modalRoutes } from '../lib/connector-client'
 
 import {
   type ConnectorTheme,
@@ -38,15 +40,37 @@ import { Spinner } from './spinner'
 export interface ConnectButtonProps {
   className?: string
   style?: React.CSSProperties
-  variant?: 'default' | 'icon-only'
+  variant?: 'default' | 'icon-only' | 'minimal' | 'outline'
+  size?: 'sm' | 'md' | 'lg'
   theme?: ConnectorTheme | Partial<ConnectorTheme> | Partial<LegacyThemeInterface>
   label?: string
   options?: Partial<ConnectorOptions>
+  disabled?: boolean
+  loading?: boolean
+  'aria-label'?: string
+  'data-testid'?: string
 }
 
-export const ConnectButton = memo<ConnectButtonProps>(({ className, style, variant = 'default', theme = {}, label, options = {} }) => {
+export const ConnectButton = memo<ConnectButtonProps>(({ 
+  className, 
+  style, 
+  variant = 'default', 
+  size = 'md',
+  theme = {}, 
+  label, 
+  options = {},
+  disabled = false,
+  loading = false,
+  'aria-label': ariaLabel,
+  'data-testid': testId
+}) => {
+  // Generate stable IDs for accessibility
+  const buttonId = useId()
+  const dropdownId = useId()
+  
   // React 19: Use transitions for non-blocking updates
   const [isPending, startConnectTransition] = useTransition()
+  const isLoading = loading || isPending
   
   // SSR hydration safety - prevent hydration mismatches
   const [isMounted, setIsMounted] = useState(false)
@@ -124,11 +148,12 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
 
   // React 19: Use callback for stable reference
   const handleAutoClose = useCallback(() => {
-    if (deferredConnected && stableOptions.autoCloseOnConnect !== false) {
-      startTransition(() => {
-        modal.close()
-      })
-    }
+    // Temporarily disabled to test navigation
+    // if (deferredConnected && stableOptions.autoCloseOnConnect !== false) {
+    //   startTransition(() => {
+    //     modal.close()
+    //   })
+    // }
   }, [deferredConnected, stableOptions.autoCloseOnConnect, modal.close])
   
   useEffect(() => {
@@ -143,35 +168,105 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
   }, [deferredSelectedAccount, stableOptions.truncateAddress])
 
   const isIconOnly = variant === 'icon-only'
+  const isMinimal = variant === 'minimal'
+  const isOutline = variant === 'outline'
 
   const [isHovered, setIsHovered] = useState(false)
   const [isPressed, setIsPressed] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
 
-  // Move all remaining hooks here BEFORE the conditional return
-  const buttonStyles: React.CSSProperties = useMemo(() => ({
-    padding: isIconOnly ? '0.75rem' : '0.75rem 1.5rem',
-    height: getButtonHeight(t),
-    backgroundColor: isHovered ? t.colors.secondary : t.colors.primary,
-    color: getAccessibleTextColor(isHovered ? t.colors.secondary : t.colors.primary),
-    border: getButtonBorder(t),
-    borderRadius: getBorderRadius(t),
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: isIconOnly ? 0 : '0.5rem',
-    boxShadow: isHovered
-      ? `${getButtonShadow(t)}, 0 0 0 4px rgba(202, 202, 202, 0.45)`
-      : getButtonShadow(t),
-    transform: isPressed && !stableOptions.reduceMotion ? 'scale(0.97)' : 'scale(1)',
-    transition: stableOptions.reduceMotion ? 'none' : 'background-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease',
-    fontFamily: t.fonts.body,
-    minWidth: isIconOnly ? '44px' : 'auto',
-    aspectRatio: isIconOnly ? '1' : 'auto',
-    outlineOffset: 2,
-    ...style,
-  }), [isIconOnly, isHovered, isPressed, t, style, stableOptions.reduceMotion])
+  // Enhanced size configurations with responsive design
+  const sizeConfig = useMemo(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+    const configs = {
+      sm: { 
+        height: isMobile ? 40 : 36, 
+        padding: isIconOnly ? (isMobile ? '0.625rem' : '0.5rem') : (isMobile ? '0.625rem 1.25rem' : '0.5rem 1rem'), 
+        fontSize: isMobile ? '0.9375rem' : '0.875rem', 
+        iconSize: isMobile ? 18 : 16 
+      },
+      md: { 
+        height: isMobile ? 48 : 44, 
+        padding: isIconOnly ? (isMobile ? '0.875rem' : '0.75rem') : (isMobile ? '0.875rem 1.75rem' : '0.75rem 1.5rem'), 
+        fontSize: isMobile ? '1.0625rem' : '1rem', 
+        iconSize: isMobile ? 20 : 18 
+      },
+      lg: { 
+        height: isMobile ? 56 : 52, 
+        padding: isIconOnly ? (isMobile ? '1.125rem' : '1rem') : (isMobile ? '1.125rem 2.25rem' : '1rem 2rem'), 
+        fontSize: isMobile ? '1.1875rem' : '1.125rem', 
+        iconSize: isMobile ? 22 : 20 
+      }
+    }
+    return configs[size]
+  }, [size, isIconOnly])
+
+  // Enhanced button styles with variant support
+  const buttonStyles: React.CSSProperties = useMemo(() => {
+    const baseStyles: React.CSSProperties = {
+      padding: sizeConfig.padding,
+      height: sizeConfig.height,
+      fontSize: sizeConfig.fontSize,
+      fontWeight: 600,
+      cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: isIconOnly ? 0 : '0.5rem',
+      borderRadius: getBorderRadius(t),
+      fontFamily: t.fonts.body,
+      minWidth: isIconOnly ? sizeConfig.height : 'auto',
+      aspectRatio: isIconOnly ? '1' : 'auto',
+      outlineOffset: 2,
+      outline: isFocused ? `2px solid ${t.colors.primary}40` : 'none',
+      opacity: disabled ? 0.6 : isLoading ? 0.8 : 1,
+      position: 'relative',
+      overflow: 'hidden',
+      userSelect: 'none',
+      WebkitTapHighlightColor: 'transparent',
+    }
+
+    // Variant-specific styles
+    if (isMinimal) {
+      return {
+        ...baseStyles,
+        backgroundColor: 'transparent',
+        color: t.colors.primary,
+        border: 'none',
+        boxShadow: 'none',
+        transform: isPressed && !stableOptions.reduceMotion ? 'scale(0.95)' : 'scale(1)',
+        transition: stableOptions.reduceMotion ? 'none' : 'all 0.15s ease',
+        ...style,
+      }
+    }
+
+    if (isOutline) {
+      return {
+        ...baseStyles,
+        backgroundColor: isHovered ? `${t.colors.primary}10` : 'transparent',
+        color: t.colors.primary,
+        border: `2px solid ${t.colors.primary}`,
+        boxShadow: isFocused ? `0 0 0 2px ${t.colors.primary}40` : 'none',
+        transform: isPressed && !stableOptions.reduceMotion ? 'scale(0.97)' : 'scale(1)',
+        transition: stableOptions.reduceMotion ? 'none' : 'all 0.2s ease',
+        ...style,
+      }
+    }
+
+    // Default variant
+    return {
+      ...baseStyles,
+      backgroundColor: isHovered ? t.colors.secondary : t.colors.primary,
+      color: getAccessibleTextColor(isHovered ? t.colors.secondary : t.colors.primary),
+      border: getButtonBorder(t),
+      boxShadow: isHovered
+        ? `${getButtonShadow(t)}, 0 0 0 4px ${t.colors.primary}20`
+        : getButtonShadow(t),
+      transform: isPressed && !stableOptions.reduceMotion ? 'scale(0.97)' : 'scale(1)',
+      transition: stableOptions.reduceMotion ? 'none' : 'all 0.2s ease',
+      ...style,
+    }
+  }, [isIconOnly, isMinimal, isOutline, isHovered, isPressed, isFocused, t, style, stableOptions.reduceMotion, sizeConfig, disabled, isLoading])
 
   // Removed connectableWallets and unconnectableWallets - now handled in WalletsPage
 
@@ -196,43 +291,71 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
     return walletMap.get(selectedWallet) ?? null
   }, [selectedAccountInfo, selectedWallet, walletMap])
 
+  // Enhanced loading state component
+  const LoadingSpinner = useMemo(() => (
+    <div
+      style={{
+        width: sizeConfig.iconSize,
+        height: sizeConfig.iconSize,
+        border: `2px solid transparent`,
+        borderTop: `2px solid currentColor`,
+        borderRight: `2px solid currentColor`,
+        borderRadius: '50%',
+        animation: stableOptions.reduceMotion ? 'none' : 'spin 0.8s linear infinite',
+        opacity: 0.8
+      }}
+      aria-hidden
+      role="status"
+      aria-label="Loading"
+    />
+  ), [sizeConfig.iconSize, stableOptions.reduceMotion])
+
+  const walletIcon = useMemo(() => (
+    <svg 
+      width={sizeConfig.iconSize} 
+      height={Math.floor(sizeConfig.iconSize * 0.8)} 
+      viewBox="0 0 21 16" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      aria-hidden
+    >
+      <path d="M3.98967 11.7879C4.10222 11.6755 4.25481 11.6123 4.41392 11.6123H19.0941C19.3615 11.6123 19.4954 11.9357 19.3062 12.1247L16.4054 15.0232C16.2929 15.1356 16.1403 15.1988 15.9812 15.1988H1.30102C1.03359 15.1988 0.899716 14.8754 1.08889 14.6864L3.98967 11.7879Z" fill="currentColor"/>
+      <path d="M3.98937 0.959506C4.10191 0.847047 4.25451 0.783875 4.41361 0.783875H19.0938C19.3612 0.783875 19.4951 1.10726 19.3059 1.29628L16.4051 4.19475C16.2926 4.30721 16.14 4.37038 15.9809 4.37038H1.30071C1.03329 4.37038 0.899411 4.047 1.08859 3.85797L3.98937 0.959506Z" fill="currentColor"/>
+      <path d="M16.4054 6.33924C16.2929 6.22675 16.1403 6.16362 15.9812 6.16362H1.30102C1.03359 6.16362 0.899717 6.48697 1.08889 6.676L3.98967 9.57445C4.10222 9.68694 4.25481 9.75012 4.41392 9.75012H19.0941C19.3615 9.75012 19.4954 9.42673 19.3062 9.23769L16.4054 6.33924Z" fill="currentColor"/>
+    </svg>
+  ), [sizeConfig.iconSize])
+
   // Prevent SSR hydration mismatches by not rendering until mounted
   if (!isMounted) {
     return (
       <button
         className={className}
         style={{
-          padding: isIconOnly ? '0.75rem' : '0.75rem 1.5rem',
-          height: 44,
+          padding: sizeConfig.padding,
+          height: sizeConfig.height,
           backgroundColor: '#f3f4f6',
           color: '#6b7280',
           border: '1px solid #e5e7eb',
           borderRadius: 8,
-          fontSize: '1rem',
+          fontSize: sizeConfig.fontSize,
           fontWeight: 600,
           cursor: 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: isIconOnly ? 0 : '0.5rem',
-          minWidth: isIconOnly ? '44px' : 'auto',
+          minWidth: isIconOnly ? sizeConfig.height : 'auto',
           aspectRatio: isIconOnly ? '1' : 'auto',
           ...style,
         }}
         disabled
-        aria-label={isIconOnly ? (label || 'Connect Wallet') : undefined}
+        aria-label={ariaLabel || (isIconOnly ? (label || 'Connect Wallet') : undefined)}
+        data-testid={testId}
       >
         {isIconOnly ? null : (label || 'Connect Wallet')}
       </button>
     )
   }
-
-  const icon = (
-    <svg width="18" height="14" viewBox="0 0 21 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path d="M3.98967 11.7879C4.10222 11.6755 4.25481 11.6123 4.41392 11.6123H19.0941C19.3615 11.6123 19.4954 11.9357 19.3062 12.1247L16.4054 15.0232C16.2929 15.1356 16.1403 15.1988 15.9812 15.1988H1.30102C1.03359 15.1988 0.899716 14.8754 1.08889 14.6864L3.98967 11.7879Z" fill="currentColor"/>
-      <path d="M3.98937 0.959506C4.10191 0.847047 4.25451 0.783875 4.41361 0.783875H19.0938C19.3612 0.783875 19.4951 1.10726 19.3059 1.29628L16.4051 4.19475C16.2926 4.30721 16.14 4.37038 15.9809 4.37038H1.30071C1.03329 4.37038 0.899411 4.047 1.08859 3.85797L3.98937 0.959506Z" fill="currentColor"/>
-      <path d="M16.4054 6.33924C16.2929 6.22675 16.1403 6.16362 15.9812 6.16362H1.30102C1.03359 6.16362 0.899717 6.48697 1.08889 6.676L3.98967 9.57445C4.10222 9.68694 4.25481 9.75012 4.41392 9.75012H19.0941C19.3615 9.75012 19.4954 9.42673 19.3062 9.23769L16.4054 6.33924Z" fill="currentColor"/>
-    </svg>
-  )
 
   // getUnconnectableReason function moved to WalletsPage
 
@@ -241,44 +364,71 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
       <DropdownRoot open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownTrigger asChild>
             <button
+              id={buttonId}
               className={className}
-              style={{ 
-                ...buttonStyles, 
-                position: 'relative',
-                // React 19: Add loading state for better UX
-                opacity: isPending ? 0.7 : 1,
-                cursor: isPending ? 'wait' : 'pointer'
-              }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => { setIsHovered(false); setIsPressed(false) }}
-              onMouseDown={() => setIsPressed(true)}
+              style={buttonStyles}
+              onMouseEnter={() => !disabled && !isLoading && setIsHovered(true)}
+              onMouseLeave={() => { setIsHovered(false); setIsPressed(false); setIsFocused(false) }}
+              onMouseDown={() => !disabled && !isLoading && setIsPressed(true)}
               onMouseUp={() => setIsPressed(false)}
-              onFocus={() => setIsHovered(true)}
-              onBlur={() => setIsHovered(false)}
+              onFocus={() => !disabled && !isLoading && setIsFocused(true)}
+              onBlur={() => { setIsFocused(false); setIsHovered(false) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setIsPressed(true)
+                }
+              }}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setIsPressed(false)
+                }
+              }}
               type="button"
-              disabled={isPending}
-              aria-label={isIconOnly ? (selectedDisplay || label || 'Wallet') : undefined}
+              disabled={disabled || isLoading}
+              aria-label={ariaLabel || (isIconOnly ? (selectedDisplay || label || 'Wallet') : undefined)}
+              aria-describedby={dropdownOpen ? dropdownId : undefined}
+              aria-expanded={dropdownOpen}
+              aria-haspopup="menu"
+              data-testid={testId}
             >
             {selectedWalletIcon ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={selectedWalletIcon} alt="Account" width={18} height={18} style={{ borderRadius: 9 }} />
+              <img 
+                src={selectedWalletIcon} 
+                alt="" 
+                width={sizeConfig.iconSize} 
+                height={sizeConfig.iconSize} 
+                style={{ borderRadius: sizeConfig.iconSize / 2 }} 
+              />
             ) : (
-              isPending ? <Spinner /> : icon
+              isLoading ? LoadingSpinner : walletIcon
             )}
-            {!isIconOnly && (isPending ? 'Connecting...' : (selectedDisplay || label || 'Wallet'))}
+            {!isIconOnly && (
+              <span style={{ 
+                opacity: isLoading ? 0.8 : 1,
+                transition: stableOptions.reduceMotion ? 'none' : 'opacity 0.2s ease'
+              }}>
+                {isLoading ? 'Connecting...' : (selectedDisplay || label || 'Wallet')}
+              </span>
+            )}
           </button>
         </DropdownTrigger>
         <DropdownContent align="end" className="">
           <div
             style={{
               minWidth: 240,
-              borderRadius: 8,
-              border: '1px solid #e5e7eb',
-              backgroundColor: '#ffffff',
+              borderRadius: getBorderRadius(t),
+              border: getButtonBorder(t),
+              backgroundColor: t.colors.background || '#ffffff',
               padding: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-              textAlign: 'left'
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              textAlign: 'left',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)'
             }}
+            role="menu"
+            aria-labelledby={buttonId}
           >
             <div style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>Account</div>
             <div style={{ padding: '8px 12px', fontSize: 13, fontFamily: 'monospace', color: '#111827' }}>{selectedDisplay}</div>
@@ -313,12 +463,94 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
             ) : null}
             {selectedWallet?.name && (
               <DropdownItem onSelect={() => modal.openWallets()} className="">
-                <div style={{ padding: '8px 12px', fontSize: 13, color: '#111827', borderRadius: 6, cursor: 'pointer' }}>
-                  Connect More
-                </div>
+              <div style={{ 
+                padding: '8px 12px', 
+                fontSize: 13, 
+                color: '#111827', 
+                borderRadius: 6, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '8px',
+                lineHeight: 1
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>🔗</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>Connect More</span>
+              </div>
               </DropdownItem>
             )}
-              <DropdownItem onSelect={async () => { 
+            
+            {/* Enhanced Navigation Options */}
+            <DropdownItem onSelect={(e) => {
+              setDropdownOpen(false) // Close dropdown first
+              setTimeout(() => {
+                modal.open(modalRoutes.PROFILE)
+              }, 100) // Small delay to ensure dropdown closes
+            }} className="">
+              <div style={{ 
+                padding: '8px 12px', 
+                fontSize: 13, 
+                color: '#111827', 
+                borderRadius: 6, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                lineHeight: 1
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>👤</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>Profile</span>
+              </div>
+            </DropdownItem>
+            
+            <DropdownItem onSelect={(e) => {
+              setDropdownOpen(false) // Close dropdown first
+              setTimeout(() => {
+                modal.open(modalRoutes.SETTINGS)
+              }, 100) // Small delay to ensure dropdown closes
+            }} className="">
+              <div style={{ 
+                padding: '8px 12px', 
+                fontSize: 13, 
+                color: '#111827', 
+                borderRadius: 6, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                lineHeight: 1
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>⚙️</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>Settings</span>
+              </div>
+            </DropdownItem>
+            
+            <DropdownItem onSelect={(e) => {
+              setDropdownOpen(false) // Close dropdown first
+              setTimeout(() => {
+                modal.open(modalRoutes.ABOUT)
+              }, 100) // Small delay to ensure dropdown closes
+            }} className="">
+              <div style={{ 
+                padding: '8px 12px', 
+                fontSize: 13, 
+                color: '#111827', 
+                borderRadius: 6, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                lineHeight: 1
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>ℹ️</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>About</span>
+              </div>
+            </DropdownItem>
+            
+            {/* Separator before disconnect */}
+            <div style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0' }} />
+            
+            <DropdownItem onSelect={async () => { 
                 try {
                     modal.close();
                     await disconnect()
@@ -329,8 +561,19 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
                     console.error('Failed to disconnect wallet:', error);
                 }
             }} className="">
-              <div style={{ padding: '8px 12px', fontSize: 13, color: '#dc2626', borderRadius: 6, cursor: 'pointer' }}>
-                Disconnect
+              <div style={{ 
+                padding: '8px 12px', 
+                fontSize: 13, 
+                color: '#dc2626', 
+                borderRadius: 6, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                lineHeight: 1
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>⏏️</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>Disconnect</span>
               </div>
             </DropdownItem>
           </div>
@@ -341,32 +584,51 @@ export const ConnectButton = memo<ConnectButtonProps>(({ className, style, varia
 
   return (
     <>
-      <button
+        <button
+        id={buttonId}
         className={className}
-        style={{
-          ...buttonStyles,
-          // React 19: Loading state styling
-          opacity: isPending ? 0.7 : 1,
-          cursor: isPending ? 'wait' : 'pointer'
-        }}
+        style={buttonStyles}
         onClick={() => {
+          if (disabled || isLoading) return
           // React 19: Use transition for smooth UX
           startConnectTransition(() => {
             modal.openWallets()
           })
         }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => { setIsHovered(false); setIsPressed(false) }}
-        onMouseDown={() => setIsPressed(true)}
+        onMouseEnter={() => !disabled && !isLoading && setIsHovered(true)}
+        onMouseLeave={() => { setIsHovered(false); setIsPressed(false); setIsFocused(false) }}
+        onMouseDown={() => !disabled && !isLoading && setIsPressed(true)}
         onMouseUp={() => setIsPressed(false)}
-        onFocus={() => setIsHovered(true)}
-        onBlur={() => setIsHovered(false)}
+        onFocus={() => !disabled && !isLoading && setIsFocused(true)}
+        onBlur={() => { setIsFocused(false); setIsHovered(false) }}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !disabled && !isLoading) {
+            e.preventDefault()
+            setIsPressed(true)
+            startConnectTransition(() => {
+              modal.openWallets()
+            })
+          }
+        }}
+        onKeyUp={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setIsPressed(false)
+          }
+        }}
         type="button"
-        disabled={isPending}
-        aria-label={isIconOnly ? (label || 'Connect Wallet') : undefined}
+        disabled={disabled || isLoading}
+        aria-label={ariaLabel || (isIconOnly ? (label || 'Connect Wallet') : undefined)}
+        data-testid={testId}
       >
-        {isPending ? <Spinner /> : icon}
-        {!isIconOnly && (isPending ? 'Connecting...' : (label || 'Connect Wallet'))}
+        {isLoading ? LoadingSpinner : walletIcon}
+        {!isIconOnly && (
+          <span style={{ 
+            opacity: isLoading ? 0.8 : 1,
+            transition: stableOptions.reduceMotion ? 'none' : 'opacity 0.2s ease'
+          }}>
+            {isLoading ? 'Connecting...' : (label || 'Connect Wallet')}
+          </span>
+        )}
       </button>
       
       <ConnectModal options={stableOptions} />

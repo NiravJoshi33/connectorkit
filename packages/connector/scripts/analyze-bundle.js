@@ -7,7 +7,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { execSync } = require('child_process')
+const zlib = require('zlib')
 
 // Colors for console output
 const colors = {
@@ -51,20 +51,28 @@ async function analyzeBundle() {
   let results = []
 
   for (const file of files) {
-    const filePath = path.join(distPath, file)
-    const stats = fs.statSync(filePath)
-    const size = stats.size
-    totalSize += size
-    
-    // Get gzipped size
-    const gzippedSize = execSync(`gzip -c "${filePath}" | wc -c`, { encoding: 'utf8' }).trim()
-    
-    results.push({
-      name: file,
-      size,
-      gzipped: parseInt(gzippedSize),
-      type: file.includes('.d.') ? 'types' : 'code'
-    })
+    try {
+      const filePath = path.resolve(distPath, file)
+      const stats = fs.statSync(filePath)
+      const size = stats.size
+      totalSize += size
+      
+      // Get gzipped size using Node-native zlib
+      const fileBuffer = fs.readFileSync(filePath)
+      const gzippedBuffer = zlib.gzipSync(fileBuffer)
+      const gzippedSize = gzippedBuffer.length
+      
+      results.push({
+        name: file,
+        size,
+        gzipped: gzippedSize,
+        type: file.includes('.d.') ? 'types' : 'code'
+      })
+    } catch (error) {
+      log('yellow', `⚠️  Failed to process ${file}: ${error.message}`)
+      // Skip this file and continue with the next one
+      continue
+    }
   }
 
   // Sort by size

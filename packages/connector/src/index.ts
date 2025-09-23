@@ -1,5 +1,5 @@
 // Initialize UI global styles (e.g., spinner keyframes) once per app
-export { injectArcConnectorGlobalStyles } from './ui/global-styles'
+export { injectConnectorGlobalStyles, injectArcConnectorGlobalStyles } from './ui/global-styles'
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
@@ -26,13 +26,10 @@ export type { UnifiedProviderProps } from './ui/unified-provider'
 export { useModal } from './hooks'
 export type { UseModalReturn } from './hooks'
 
-// UI exports  
+// UI exports - Enhanced with React 19 features
 export { ConnectButton } from './ui/connect-button'
-export { ConnectButtonEnhanced } from './ui/connect-button-enhanced'
 export type { ConnectButtonProps } from './ui/connect-button'
-export type { ConnectButtonEnhancedProps } from './ui/connect-button-enhanced'
 export { ConnectModal } from './ui/connect-modal'
-export { ConnectModalEnhanced } from './ui/connect-modal-enhanced'
 
 // React 19 Enhanced Components
 export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'

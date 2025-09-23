@@ -13,8 +13,9 @@ import {
   useSyncExternalStore,
   startTransition
 } from 'react'
-import { useArcClient } from '../core/arc-client-provider'
+import { useArcClient, type ArcClientSnapshot } from '../core/arc-client-provider'
 import { address, type Address } from '@solana/kit'
+import type { Transport } from '../transports/types'
 
 export interface UseBalanceEnhancedOptions {
   address?: string | Address
@@ -38,6 +39,16 @@ export interface UseBalanceEnhancedReturn {
   refresh: () => Promise<void>
 }
 
+// Type definitions for proper typing instead of 'as any'
+interface BalanceRpcResponse {
+  value: string | number | bigint
+}
+
+interface ClientConfigSubset {
+  transport: Transport
+  commitment?: 'processed' | 'confirmed' | 'finalized'
+}
+
 // Balance store for external state management
 class BalanceStore {
   private subscribers = new Set<() => void>()
@@ -50,11 +61,11 @@ class BalanceStore {
     isStale: boolean
   }
   private options: UseBalanceEnhancedOptions
-  private client: any
-  private refreshTimer?: NodeJS.Timeout
-  private staleTimer?: NodeJS.Timeout
+  private client: ArcClientSnapshot | null
+  private refreshTimer?: ReturnType<typeof setTimeout>
+  private staleTimer?: ReturnType<typeof setTimeout>
 
-  constructor(options: UseBalanceEnhancedOptions, client: any) {
+  constructor(options: UseBalanceEnhancedOptions, client: ArcClientSnapshot | null) {
     this.options = options
     this.client = client
     this.state = {
@@ -111,8 +122,15 @@ class BalanceStore {
         ? address(this.options.address)
         : this.options.address
 
-      // Use client to fetch balance
-      const balance = await this.client.getBalance(addr, this.options.mint)
+      // Use client transport to fetch balance
+      const { transport, commitment } = this.client.config as ClientConfigSubset
+      const result = await transport.request<BalanceRpcResponse>({
+        method: 'getBalance',
+        params: [addr, { commitment: commitment ?? 'confirmed' }]
+      })
+      
+      const raw = result.value
+      const balance = typeof raw === 'bigint' ? raw : BigInt(raw ?? 0)
 
       // Update state with success
       this.state = {
