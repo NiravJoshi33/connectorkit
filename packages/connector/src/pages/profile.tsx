@@ -147,7 +147,7 @@ export function ProfilePage({ options, onNavigate, isTransitioning }: ProfilePag
             <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '500' }}>
               SOL
             </span>
-            {balanceLoading && <Spinner size={14} />}
+            {balanceLoading && <Spinner size="sm" />}
           </div>
         </motion.div>
       </div>

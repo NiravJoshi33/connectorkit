@@ -129,7 +129,7 @@ export function WalletsPage({ options = {}, onConnectError, helpMode = false, on
                   <span style={{ fontSize: 12, color: '#6b7280' }}>
                     {connecting && connectingWalletName === w.name ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <Spinner size={14} color="#9ca3af" speedMs={900} />
+                        <Spinner size="sm" color="primary" />
                         Connecting…
                       </span>
                     ) : (

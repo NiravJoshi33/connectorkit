@@ -19,7 +19,7 @@ import {
   DropdownTrigger,
   DropdownContent,
   DropdownItem
-} from '@connectorkit/ui-primitives'
+} from '../primitives'
 import { ConnectModal } from './connect-modal'
 import { modalRoutes } from '../lib/connector-client'
 
@@ -414,48 +414,44 @@ export const ConnectButton = memo<ConnectButtonProps>(({
             )}
           </button>
         </DropdownTrigger>
-        <DropdownContent align="end" className="">
+        <DropdownContent align="end" className="connector-account-dropdown">
           <div
-            style={{
-              minWidth: 240,
-              borderRadius: getBorderRadius(t),
-              border: getButtonBorder(t),
-              backgroundColor: t.colors.background || '#ffffff',
-              padding: 8,
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-              textAlign: 'left',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)'
-            }}
             role="menu"
             aria-labelledby={buttonId}
           >
-            <div style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>Account</div>
-            <div style={{ padding: '8px 12px', fontSize: 13, fontFamily: 'monospace', color: '#111827' }}>{selectedDisplay}</div>
+            <div className="connector-account-dropdown__label">Account</div>
+            <div className="connector-account-dropdown__address">{selectedDisplay}</div>
             {(accounts ?? []).length > 1 ? (
-              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8 }}>
-                <div style={{ padding: '4px 12px', fontSize: 12, color: '#6b7280' }}>Accounts</div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="connector-account-dropdown__accounts-section">
+                <div className="connector-account-dropdown__label">Accounts</div>
+                <div className="connector-account-dropdown__accounts-list">
                   {(accounts ?? []).map((acc: any) => (
                     <button
                       key={acc.address}
                       onClick={() => selectAccount(acc.address)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: 6,
-                        color: acc.address === selectedAccount ? '#111827' : '#374151'
-                      }}
+                      className={`connector-account-dropdown__account-item ${
+                        acc.address === selectedAccount ? 'connector-account-dropdown__account-item--selected' : ''
+                      }`}
                     >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span className="connector-account-dropdown__account-content">
                         {acc.icon ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={acc.icon} alt="" width={16} height={16} style={{ borderRadius: 8 }} />
+                          <img 
+                            src={acc.icon} 
+                            alt="" 
+                            className="connector-account-dropdown__account-icon"
+                          />
                         ) : null}
-                        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                        <span className="connector-account-dropdown__account-address">
                           {String(acc.address).slice(0, 8)}...{String(acc.address).slice(-4)}
                         </span>
                       </span>
-                      <span aria-hidden>{acc.address === selectedAccount ? '●' : '○'}</span>
+                      <span 
+                        className="connector-account-dropdown__account-indicator" 
+                        aria-hidden
+                      >
+                        {acc.address === selectedAccount ? '●' : '○'}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -463,92 +459,52 @@ export const ConnectButton = memo<ConnectButtonProps>(({
             ) : null}
             {selectedWallet?.name && (
               <DropdownItem onSelect={() => modal.openWallets()} className="">
-              <div style={{ 
-                padding: '8px 12px', 
-                fontSize: 13, 
-                color: '#111827', 
-                borderRadius: 6, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'start',
-                gap: '8px',
-                lineHeight: 1
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>🔗</span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>Connect More</span>
-              </div>
+                <div className="connector-account-dropdown__nav-item">
+                  <span className="connector-account-dropdown__nav-icon">🔗</span>
+                  <span className="connector-account-dropdown__nav-text">Connect More</span>
+                </div>
               </DropdownItem>
             )}
             
             {/* Enhanced Navigation Options */}
-            <DropdownItem onSelect={(e) => {
+            <DropdownItem onSelect={() => {
               setDropdownOpen(false) // Close dropdown first
               setTimeout(() => {
                 modal.open(modalRoutes.PROFILE)
               }, 100) // Small delay to ensure dropdown closes
             }} className="">
-              <div style={{ 
-                padding: '8px 12px', 
-                fontSize: 13, 
-                color: '#111827', 
-                borderRadius: 6, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                lineHeight: 1
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>👤</span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>Profile</span>
+              <div className="connector-account-dropdown__nav-item">
+                <span className="connector-account-dropdown__nav-icon">👤</span>
+                <span className="connector-account-dropdown__nav-text">Profile</span>
               </div>
             </DropdownItem>
             
-            <DropdownItem onSelect={(e) => {
+            <DropdownItem onSelect={() => {
               setDropdownOpen(false) // Close dropdown first
               setTimeout(() => {
                 modal.open(modalRoutes.SETTINGS)
               }, 100) // Small delay to ensure dropdown closes
             }} className="">
-              <div style={{ 
-                padding: '8px 12px', 
-                fontSize: 13, 
-                color: '#111827', 
-                borderRadius: 6, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                lineHeight: 1
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>⚙️</span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>Settings</span>
+              <div className="connector-account-dropdown__nav-item">
+                <span className="connector-account-dropdown__nav-icon">⚙️</span>
+                <span className="connector-account-dropdown__nav-text">Settings</span>
               </div>
             </DropdownItem>
             
-            <DropdownItem onSelect={(e) => {
+            <DropdownItem onSelect={() => {
               setDropdownOpen(false) // Close dropdown first
               setTimeout(() => {
                 modal.open(modalRoutes.ABOUT)
               }, 100) // Small delay to ensure dropdown closes
             }} className="">
-              <div style={{ 
-                padding: '8px 12px', 
-                fontSize: 13, 
-                color: '#111827', 
-                borderRadius: 6, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                lineHeight: 1
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>ℹ️</span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>About</span>
+              <div className="connector-account-dropdown__nav-item">
+                <span className="connector-account-dropdown__nav-icon">ℹ️</span>
+                <span className="connector-account-dropdown__nav-text">About</span>
               </div>
             </DropdownItem>
             
             {/* Separator before disconnect */}
-            <div style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0' }} />
+            <hr className="connector-account-dropdown__separator" />
             
             <DropdownItem onSelect={async () => { 
                 try {
@@ -561,19 +517,9 @@ export const ConnectButton = memo<ConnectButtonProps>(({
                     console.error('Failed to disconnect wallet:', error);
                 }
             }} className="">
-              <div style={{ 
-                padding: '8px 12px', 
-                fontSize: 13, 
-                color: '#dc2626', 
-                borderRadius: 6, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                lineHeight: 1
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>⏏️</span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>Disconnect</span>
+              <div className="connector-account-dropdown__nav-item connector-account-dropdown__nav-item--danger">
+                <span className="connector-account-dropdown__nav-icon">⏏️</span>
+                <span className="connector-account-dropdown__nav-text">Disconnect</span>
               </div>
             </DropdownItem>
           </div>

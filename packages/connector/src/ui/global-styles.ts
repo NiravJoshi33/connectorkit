@@ -4,71 +4,56 @@ function injectConnectorGlobalStyles() {
   if (hasInjectedConnectorStyles) return
   if (typeof document === 'undefined') return
 
-  const style = document.createElement('style')
-  style.setAttribute('data-connector-styles', 'true')
-  style.textContent = `
-/* ConnectorKit Animations */
-@keyframes spin {
+  // Import CSS styles - this will be handled by the build system
+  // The CSS files will be bundled and injected automatically
+  try {
+    // Require CSS - this enables CSS bundling
+    require('../styles/index.css')
+    hasInjectedConnectorStyles = true
+  } catch (error) {
+    console.warn('ConnectorKit: Failed to load styles', error)
+    
+    // Fallback: Inject minimal critical styles directly
+    const style = document.createElement('style')
+    style.setAttribute('data-connector-styles', 'true')
+    style.textContent = `
+/* ConnectorKit - Critical Styles Fallback */
+@keyframes connector-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-@keyframes fadeIn {
+@keyframes connector-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes slideUp {
-  from {
-    transform: translate(-50%, -45%) scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
+.connector-animate-spin {
+  animation: connector-spin 1s linear infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); }
-  to { transform: scale(1); }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+.connector-animate-fade-in {
+  animation: connector-fade-in 0.3s ease-out;
 }
 
 /* Focus ring utilities */
 .connector-focus-ring {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #512da8;
   outline-offset: 2px;
 }
 
-/* Loading shimmer effect */
-.connector-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200px 100%;
-  animation: shimmer 1.5s infinite;
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .connector-animate-spin,
+  .connector-animate-fade-in {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 `
-  document.head.appendChild(style)
-  hasInjectedConnectorStyles = true
+    document.head.appendChild(style)
+    hasInjectedConnectorStyles = true
+  }
 }
 
 // Initialize immediately in the browser so animations are available

@@ -46,7 +46,6 @@
     }
   },
   "dependencies": {
-    "@connectorkit/ui-primitives": "workspace:*",
     "@solana-mobile/wallet-standard-mobile": "^0.3.0",
     "@wallet-standard/app": "^1.0.0",
     "@wallet-standard/base": "^1.0.0",

@@ -8,7 +8,7 @@ import {
   DialogContent, 
   DialogBackdrop, 
   DialogClose
-} from '@connectorkit/ui-primitives'
+} from '../../primitives'
 import { modalRoutes } from '../../lib/connector-client'
 import type { ConnectorOptions } from '../../types'
 
