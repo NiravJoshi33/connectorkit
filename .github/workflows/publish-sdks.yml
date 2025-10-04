@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_packages:
-        description: "Publish @connector-kit packages to npm"
+        description: "Publish @connector-kit/connector package to npm"
         type: boolean
         default: true
 
@@ -58,24 +58,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @connector-kit/sdk
-        working-directory: packages/sdk
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @connector-kit/jupiter
-        working-directory: packages/jupiter
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @connector-kit/providers
-        working-directory: packages/providers
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   create-release:
     if: startsWith(github.ref, 'refs/tags/') && always() && !cancelled()
     needs: [publish-packages]
@@ -100,41 +82,10 @@ jobs:
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @connector-kit/sdk
-            - Package: `@connector-kit/sdk`
-            - Version: ${{ github.ref_name }}
-            - Registry: npm
-
-            ### @connector-kit/jupiter
-            - Package: `@connector-kit/jupiter`
-            - Version: ${{ github.ref_name }}
-            - Registry: npm
-
-            ### @connector-kit/providers
-            - Package: `@connector-kit/providers`
-            - Version: ${{ github.ref_name }}
-            - Registry: npm
-
             ## Installation
 
-            **Install the main SDK:**
-            ```bash
-            npm install @connector-kit/sdk@${{ github.ref_name }}
-            ```
-
-            **Install the connector (if using headless):**
             ```bash
             npm install @connector-kit/connector@${{ github.ref_name }}
-            ```
-
-            **Install Jupiter integration:**
-            ```bash
-            npm install @connector-kit/jupiter@${{ github.ref_name }}
-            ```
-
-            **Install providers:**
-            ```bash
-            npm install @connector-kit/providers@${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
