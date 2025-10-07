@@ -5,6 +5,7 @@
  */
 
 import type { SolanaCluster } from '@wallet-ui/core'
+import { getExplorerLink } from 'gill'
 import { RPC_ENDPOINTS } from './network'
 
 /**
@@ -82,7 +83,11 @@ export function getTransactionUrl(
   signature: string,
   cluster: SolanaCluster
 ): string {
-  return getClusterExplorerUrl(cluster, `tx/${signature}`)
+  const clusterType = getClusterType(cluster)
+  return getExplorerLink({ 
+    transaction: signature,
+    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType as any
+  })
 }
 
 /**
@@ -97,7 +102,11 @@ export function getAddressUrl(
   address: string,
   cluster: SolanaCluster
 ): string {
-  return getClusterExplorerUrl(cluster, `address/${address}`)
+  const clusterType = getClusterType(cluster)
+  return getExplorerLink({ 
+    address,
+    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType as any
+  })
 }
 
 /**

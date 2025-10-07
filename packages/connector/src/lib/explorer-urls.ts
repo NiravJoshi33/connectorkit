@@ -5,6 +5,8 @@
  * accounts, and other on-chain data.
  */
 
+import { getExplorerLink } from 'gill'
+
 export type ExplorerType = 'solana-explorer' | 'solscan' | 'xray' | 'solana-fm'
 
 export interface ExplorerOptions {
@@ -24,16 +26,17 @@ export function getSolanaExplorerUrl(
 	const { cluster = 'mainnet', customUrl } = options
 	const normalizedCluster = cluster === 'mainnet-beta' ? 'mainnet' : cluster
 
+	// Handle localnet with custom URL - gill doesn't support this specific case
 	if (normalizedCluster === 'localnet') {
 		const url = customUrl || 'http://localhost:8899'
 		return `https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=${encodeURIComponent(url)}`
 	}
 
-	if (normalizedCluster === 'mainnet') {
-		return `https://explorer.solana.com/tx/${signature}`
-	}
-
-	return `https://explorer.solana.com/tx/${signature}?cluster=${normalizedCluster}`
+	// Use gill's getExplorerLink for standard clusters
+	return getExplorerLink({ 
+		transaction: signature,
+		cluster: normalizedCluster as any
+	})
 }
 
 /**

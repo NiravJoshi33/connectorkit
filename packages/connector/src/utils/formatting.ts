@@ -4,6 +4,8 @@
  * Utility functions for formatting addresses, amounts, and other display values
  */
 
+import { lamportsToSol } from 'gill'
+
 /**
  * Format a Solana address for display
  * 
@@ -30,7 +32,7 @@ export function formatAddress(
 /**
  * Format SOL amount for display
  * Converts lamports to SOL with proper decimal places
- * Uses bigint arithmetic to preserve precision for large values
+ * Uses gill's lamportsToSol for accurate conversion
  * 
  * @example
  * formatSOL(1000000000) // Returns: '1.0000 SOL'
@@ -45,48 +47,10 @@ export function formatSOL(
 ): string {
   const { decimals = 4, suffix = true } = options
   
-  // Convert to bigint if number
-  const lamportsBigInt = typeof lamports === 'number' ? BigInt(lamports) : lamports
+  // Use gill's lamportsToSol for the conversion
+  const solString = lamportsToSol(lamports, decimals)
   
-  const LAMPORTS_PER_SOL = BigInt(1_000_000_000)
-  
-  // Handle negative values
-  const isNegative = lamportsBigInt < 0n
-  const absoluteLamports = isNegative ? -lamportsBigInt : lamportsBigInt
-  
-  // Get integer SOL and fractional lamports
-  let integerSol = absoluteLamports / LAMPORTS_PER_SOL
-  const fractionalLamports = absoluteLamports % LAMPORTS_PER_SOL
-  
-  // Convert fractional part to string (always 9 digits for lamports)
-  const fractionalStr = fractionalLamports.toString().padStart(9, '0')
-  
-  // Get the decimal part we want to display
-  let decimalPart = fractionalStr.slice(0, decimals)
-  
-  // Round if there's a next digit and it's >= 5
-  if (decimals < 9 && decimals > 0) {
-    const nextDigit = parseInt(fractionalStr[decimals] || '0', 10)
-    if (nextDigit >= 5) {
-      // Round up the decimal part
-      let roundedDecimal = BigInt(decimalPart) + 1n
-      decimalPart = roundedDecimal.toString().padStart(decimals, '0')
-      
-      // Handle overflow (e.g., 0.9999 rounded up becomes 1.0000)
-      if (decimalPart.length > decimals) {
-        integerSol = integerSol + 1n
-        decimalPart = '0'.repeat(decimals)
-      }
-    }
-  }
-  
-  // Build the formatted string
-  const sign = isNegative ? '-' : ''
-  const formatted = decimals > 0 
-    ? `${sign}${integerSol}.${decimalPart}`
-    : `${sign}${integerSol}`
-  
-  return suffix ? `${formatted} SOL` : formatted
+  return suffix ? `${solString} SOL` : solString
 }
 
 /**
