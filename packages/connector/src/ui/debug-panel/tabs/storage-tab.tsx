@@ -6,7 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { Section, Divider, Button } from '../ui-components'
-import type { StorageAdapter } from '../../../lib/enhanced-storage'
+import type { StorageAdapter } from '../../../types/storage'
 import type { SolanaClusterId } from '@wallet-ui/core'
 
 interface StorageTabProps {

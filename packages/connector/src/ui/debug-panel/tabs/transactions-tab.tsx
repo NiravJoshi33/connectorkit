@@ -7,13 +7,13 @@
 import { useState } from 'react'
 import { Button, EmptyState } from '../ui-components'
 import { ExternalLinkIcon } from '../icons'
-import { 
-	getSolanaExplorerUrl, 
-	getSolscanUrl, 
+import {
+	getSolanaExplorerUrl,
+	getSolscanUrl,
 	getXrayUrl,
 	formatSignature
 } from '../../../lib/explorer-urls'
-import type { TransactionActivity } from '../../../lib/connector-client'
+import type { TransactionActivity } from '../../../types/transactions'
 
 interface TransactionsTabProps {
 	client: any

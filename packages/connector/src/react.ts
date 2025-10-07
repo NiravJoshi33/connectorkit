@@ -36,16 +36,22 @@ export type {
 export type { UnifiedProviderProps } from './ui/unified-provider'
 
 // Core types needed for React integration (no implementation re-exports)
-export type { 
-  ConnectorConfig,
-  ConnectorState,
-  WalletInfo,
-  AccountInfo
-} from './lib/connector-client'
-
 export type {
   Wallet,
   WalletAccount,
+  WalletInfo
+} from './types/wallets'
+
+export type {
+  AccountInfo
+} from './types/accounts'
+
+export type {
+  ConnectorConfig,
+  ConnectorState
+} from './types/connector'
+
+export type {
   WalletStandardWallet,
   WalletStandardAccount
 } from './lib/wallet-standard-shim'

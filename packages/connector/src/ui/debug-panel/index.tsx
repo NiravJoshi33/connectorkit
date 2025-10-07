@@ -18,7 +18,7 @@ import { useAccount } from '../../hooks/use-account'
 import { useCluster } from '../../hooks/use-cluster'
 import { useTransactionSigner } from '../../hooks/use-transaction-signer'
 import { getConnectionPool } from '../../lib/connection-pool'
-import type { ConnectorEvent } from '../../lib/connector-client'
+import type { ConnectorEvent } from '../../types/events'
 
 import type { DebugPanelProps, TabId, TabConfig } from './types'
 import { 

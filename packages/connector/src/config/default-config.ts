@@ -1,4 +1,4 @@
-import type { ConnectorConfig } from '../lib/connector-client'
+import type { ConnectorConfig } from '../types/connector'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
 import { 
   createSolanaMainnet, 

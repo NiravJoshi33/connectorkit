@@ -12,15 +12,13 @@
 
 import { Storage as WalletUiStorage } from '@wallet-ui/core'
 import type { SolanaClusterId } from '@wallet-ui/core'
-
-export interface StorageOptions<T> {
-  /** Custom error handler for storage failures */
-  onError?: (error: Error) => void
-  /** Validate before setting values */
-  validator?: (value: T) => boolean
-  /** Use memory storage if localStorage unavailable (SSR) */
-  useMemoryFallback?: boolean
-}
+import type {
+	StorageOptions,
+	StorageAdapter,
+	EnhancedStorageAccountOptions,
+	EnhancedStorageClusterOptions,
+	EnhancedStorageWalletOptions
+} from '../types/storage'
 
 /**
  * Enhanced version of wallet-ui's Storage class
@@ -221,13 +219,6 @@ export class EnhancedStorage<T> extends WalletUiStorage<T> {
 // Factory Functions
 // ============================================================================
 
-export interface EnhancedStorageAccountOptions {
-  key?: string
-  initial?: string | undefined
-  validator?: (value: string | undefined) => boolean
-  onError?: (error: Error) => void
-}
-
 /**
  * Create a storage instance for wallet account persistence
  * 
@@ -253,13 +244,6 @@ export function createEnhancedStorageAccount(
       useMemoryFallback: true, // Always fallback for SSR
     }
   )
-}
-
-export interface EnhancedStorageClusterOptions {
-  key?: string
-  initial?: SolanaClusterId
-  validClusters?: SolanaClusterId[]
-  onError?: (error: Error) => void
 }
 
 /**
@@ -295,12 +279,6 @@ export function createEnhancedStorageCluster(
   return storage
 }
 
-export interface EnhancedStorageWalletOptions {
-  key?: string
-  initial?: string | undefined
-  onError?: (error: Error) => void
-}
-
 /**
  * Create a storage instance for wallet name persistence
  * 
@@ -327,12 +305,6 @@ export function createEnhancedStorageWallet(
 // ============================================================================
 // Storage Adapter Interface
 // ============================================================================
-
-export interface StorageAdapter<T> {
-  get(): T
-  set(value: T): void
-  subscribe?(callback: (value: T) => void): () => void
-}
 
 /**
  * Adapter to make EnhancedStorage compatible with StorageAdapter interface

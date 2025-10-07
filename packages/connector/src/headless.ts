@@ -21,22 +21,46 @@ export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOption
 // ============================================================================
 // Essential Types
 // ============================================================================
-export type { 
-  ConnectorConfig,
-  ConnectorState,
-  WalletInfo,
-  AccountInfo,
-  ConnectorHealth,
-  ConnectorEvent,
-  ConnectorEventListener,
-  ConnectorDebugMetrics,
-  TransactionActivity,
-  ConnectorDebugState
-} from './lib/connector-client'
-
 export type {
   Wallet,
   WalletAccount,
+  WalletInfo
+} from './types/wallets'
+
+export type {
+  AccountInfo
+} from './types/accounts'
+
+export type {
+  ConnectorConfig,
+  ConnectorState,
+  ConnectorHealth,
+  ConnectorDebugMetrics,
+  ConnectorDebugState,
+  Listener
+} from './types/connector'
+
+export type {
+  TransactionSignerConfig,
+  SignedTransaction,
+  TransactionSignerCapabilities,
+  TransactionActivity
+} from './types/transactions'
+
+export type {
+  ConnectorEvent,
+  ConnectorEventListener
+} from './types/events'
+
+export type {
+  StorageAdapter,
+  StorageOptions,
+  EnhancedStorageAccountOptions,
+  EnhancedStorageClusterOptions,
+  EnhancedStorageWalletOptions
+} from './types/storage'
+
+export type {
   WalletStandardWallet,
   WalletStandardAccount
 } from './lib/wallet-standard-shim'
@@ -53,10 +77,7 @@ export {
 } from './lib/transaction-signer'
 
 export type {
-  TransactionSigner,
-  TransactionSignerConfig,
-  TransactionSignerCapabilities,
-  SignedTransaction
+  TransactionSigner
 } from './lib/transaction-signer'
 
 // ============================================================================
@@ -83,14 +104,6 @@ export {
   createEnhancedStorageAccount,
   createEnhancedStorageCluster,
   createEnhancedStorageWallet
-} from './lib/enhanced-storage'
-
-export type { 
-  StorageAdapter,
-  StorageOptions,
-  EnhancedStorageAccountOptions,
-  EnhancedStorageClusterOptions,
-  EnhancedStorageWalletOptions
 } from './lib/enhanced-storage'
 
 // ============================================================================

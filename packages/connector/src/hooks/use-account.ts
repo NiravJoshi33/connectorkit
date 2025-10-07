@@ -10,7 +10,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { useConnector } from '../ui/connector-provider'
 import { copyAddressToClipboard } from '../utils'
 import { formatAddressSimple } from '../utils/formatting-light'
-import type { AccountInfo } from '../lib/connector-client'
+import type { AccountInfo } from '../types/accounts'
 
 export interface UseAccountReturn {
   /** The connected wallet address */

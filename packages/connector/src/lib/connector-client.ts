@@ -1,6 +1,12 @@
-import { getWalletsRegistry, type Wallet, type WalletAccount } from './wallet-standard-shim'
+import { getWalletsRegistry } from './wallet-standard-shim'
+import type { Wallet, WalletAccount } from '../types/wallets'
+import type { WalletInfo } from '../types/wallets'
+import type { AccountInfo } from '../types/accounts'
+import type { ConnectorState, ConnectorConfig, ConnectorHealth, ConnectorDebugMetrics, ConnectorDebugState, Listener } from '../types/connector'
+import type { TransactionActivity } from '../types/transactions'
+import type { ConnectorEvent, ConnectorEventListener } from '../types/events'
+import type { StorageAdapter } from '../types/storage'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
-import type { StorageAdapter } from './enhanced-storage'
 import { Address, debug, Signature } from 'gill'
 import type {
 	StandardConnectFeature,
@@ -45,153 +51,6 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
 function hasFeature(wallet: Wallet, featureName: string): boolean {
 	return featureName in wallet.features && (wallet.features as Record<string, unknown>)[featureName] !== undefined
 }
-
-export interface WalletInfo {
-	wallet: Wallet
-	installed: boolean
-	/** Precomputed capability flag for UI convenience */
-	connectable?: boolean
-}
-
-export interface AccountInfo {
-	address: Address
-	icon?: string
-	raw: WalletAccount
-}
-
-/**
- * Health check information for connector diagnostics
- * Useful for debugging, monitoring, and support
- */
-export interface ConnectorHealth {
-	/** Whether the connector has been initialized */
-	initialized: boolean
-	/** Whether Wallet Standard registry is available */
-	walletStandardAvailable: boolean
-	/** Whether localStorage/storage is available */
-	storageAvailable: boolean
-	/** Number of wallets currently detected */
-	walletsDetected: number
-	/** List of errors encountered during initialization or operation */
-	errors: string[]
-	/** Current connection state */
-	connectionState: {
-		connected: boolean
-		connecting: boolean
-		hasSelectedWallet: boolean
-		hasSelectedAccount: boolean
-	}
-	/** Timestamp of health check */
-	timestamp: string
-}
-
-/**
- * Performance and debug metrics for monitoring
- * Useful for identifying performance issues and optimization opportunities
- */
-export interface ConnectorDebugMetrics {
-	/** Total number of state updates that resulted in actual changes */
-	stateUpdates: number
-	/** Number of state updates that were skipped (no changes detected) */
-	noopUpdates: number
-	/** Percentage of updates that were optimized away */
-	optimizationRate: number
-	/** Number of active event listeners */
-	eventListenerCount: number
-	/** Number of state subscribers */
-	subscriptionCount: number
-	/** Average time taken for state updates (in milliseconds) */
-	avgUpdateTimeMs: number
-	/** Timestamp of last state update */
-	lastUpdateTime: number
-}
-
-/**
- * Transaction activity record for debugging and monitoring
- */
-export interface TransactionActivity {
-	/** Transaction signature */
-	signature: Signature
-	/** When the transaction was sent */
-	timestamp: string
-	/** Transaction status */
-	status: 'pending' | 'confirmed' | 'failed'
-	/** Error message if failed */
-	error?: string
-	/** Cluster where transaction was sent */
-	cluster: string
-	/** Fee payer address */
-	feePayer?: Address
-	/** Method used (signAndSendTransaction, sendTransaction, etc) */
-	method: string
-	/** Additional metadata */
-	metadata?: Record<string, any>
-}
-
-/**
- * Debug state with transaction history
- */
-export interface ConnectorDebugState extends ConnectorDebugMetrics {
-	/** Recent transaction activity (limited by maxTransactions) */
-	transactions: TransactionActivity[]
-	/** Total transactions tracked in this session */
-	totalTransactions: number
-}
-
-/**
- * Event types emitted by the connector
- * Use these for analytics, logging, and custom behavior
- */
-export type ConnectorEvent =
-	| { type: 'wallet:connected'; wallet: string; account: string; timestamp: string }
-	| { type: 'wallet:disconnected'; timestamp: string }
-	| { type: 'wallet:changed'; wallet: string; timestamp: string }
-	| { type: 'account:changed'; account: string; timestamp: string }
-	| { type: 'cluster:changed'; cluster: string; previousCluster: string | null; timestamp: string }
-	| { type: 'wallets:detected'; count: number; timestamp: string }
-	| { type: 'error'; error: Error; context: string; timestamp: string }
-	| { type: 'connecting'; wallet: string; timestamp: string }
-	| { type: 'connection:failed'; wallet: string; error: string; timestamp: string }
-	| { type: 'transaction:tracked'; signature: string; status: TransactionActivity['status']; timestamp: string }
-	| { type: 'transaction:updated'; signature: string; status: TransactionActivity['status']; timestamp: string }
-
-/**
- * Event listener function type
- */
-export type ConnectorEventListener = (event: ConnectorEvent) => void
-
-
-export interface ConnectorState {
-	wallets: WalletInfo[]
-	selectedWallet: Wallet | null
-	connected: boolean
-	connecting: boolean
-	accounts: AccountInfo[]
-	selectedAccount: string | null
-	cluster: SolanaCluster | null
-	clusters: SolanaCluster[]
-}
-
-type Listener = (s: ConnectorState) => void
-
-export interface ConnectorConfig {
-	autoConnect?: boolean
-	debug?: boolean
-	/** Storage configuration using enhanced storage adapters */
-	storage?: {
-				account: StorageAdapter<string | undefined>
-				cluster: StorageAdapter<SolanaClusterId>
-				wallet: StorageAdapter<string | undefined>
-		  }
-	
-	/** Enhanced cluster configuration using wallet-ui */
-	cluster?: {
-		clusters?: SolanaCluster[]
-		persistSelection?: boolean
-		initialCluster?: SolanaClusterId
-	}
-}
-
 
 export class ConnectorClient {
 	private state: ConnectorState

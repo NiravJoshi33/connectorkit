@@ -86,7 +86,7 @@ export function getTransactionUrl(
   const clusterType = getClusterType(cluster)
   return getExplorerLink({ 
     transaction: signature,
-    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType as any
+    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType
   })
 }
 
@@ -105,7 +105,7 @@ export function getAddressUrl(
   const clusterType = getClusterType(cluster)
   return getExplorerLink({ 
     address,
-    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType as any
+    cluster: clusterType === 'mainnet' ? 'mainnet' : clusterType
   })
 }
 

@@ -10,11 +10,11 @@
 
 import { useMemo } from 'react'
 import { useConnector } from '../ui/connector-provider'
-import { 
-	createTransactionSigner, 
-	type TransactionSigner,
-	type TransactionSignerCapabilities
+import {
+	createTransactionSigner,
+	type TransactionSigner
 } from '../lib/transaction-signer'
+import type { TransactionSignerCapabilities } from '../types/transactions'
 
 /**
  * Return value from useTransactionSigner hook

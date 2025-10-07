@@ -3,7 +3,7 @@
 import type { ReactNode, ComponentType } from 'react'
 import { ConnectorProvider } from './connector-provider'
 import type { MobileWalletAdapterConfig } from './connector-provider'
-import type { ConnectorConfig } from '../lib/connector-client'
+import type { ConnectorConfig } from '../types/connector'
 import type { UnifiedConfig } from '../config/unified-config'
 
 export interface UnifiedProviderProps {
