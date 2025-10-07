@@ -1,0 +1,9 @@
+// @ts-nocheck -- skip type checking
+import * as docs_4 from "../content/docs/connector-kit/try-it-out.mdx?collection=docs&hash=1758583714656"
+import * as docs_3 from "../content/docs/connector-kit/introduction.mdx?collection=docs&hash=1758583714656"
+import * as docs_2 from "../content/docs/connector-kit/api-reference.mdx?collection=docs&hash=1758583714656"
+import * as docs_1 from "../content/docs/connector-kit/advanced.mdx?collection=docs&hash=1758583714656"
+import * as docs_0 from "../content/docs/index.mdx?collection=docs&hash=1758583714656"
+import { _runtime } from "fumadocs-mdx"
+import * as _source from "../source.config"
+export const docs = _runtime.docs<typeof _source.docs>([{ info: {"path":"index.mdx","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/index.mdx"}, data: docs_0 }, { info: {"path":"connector-kit/advanced.mdx","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/connector-kit/advanced.mdx"}, data: docs_1 }, { info: {"path":"connector-kit/api-reference.mdx","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/connector-kit/api-reference.mdx"}, data: docs_2 }, { info: {"path":"connector-kit/introduction.mdx","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/connector-kit/introduction.mdx"}, data: docs_3 }, { info: {"path":"connector-kit/try-it-out.mdx","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/connector-kit/try-it-out.mdx"}, data: docs_4 }], [{"info":{"path":"meta.json","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/meta.json"},"data":{"title":"Connector Kit","pages":["index","connector-kit"]}}, {"info":{"path":"connector-kit/meta.json","absolutePath":"/Users/stevensarmi/Code/connectorkit/apps/docs/content/docs/connector-kit/meta.json"},"data":{"title":"Connector Kit","pages":["introduction","try-it-out","api-reference","advanced"],"defaultOpen":false}}])
