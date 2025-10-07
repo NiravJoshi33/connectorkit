@@ -5,13 +5,13 @@
  * accounts, and other on-chain data.
  */
 
-import { getExplorerLink } from 'gill'
+import { getExplorerLink, type SolanaClusterMoniker } from 'gill'
 
 export type ExplorerType = 'solana-explorer' | 'solscan' | 'xray' | 'solana-fm'
 
 export interface ExplorerOptions {
 	/** Cluster to use for the explorer link */
-	cluster?: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet' | string
+	cluster?: SolanaClusterMoniker | "mainnet-beta" | "localhost"
 	/** Custom RPC URL for localnet */
 	customUrl?: string
 }
@@ -35,7 +35,7 @@ export function getSolanaExplorerUrl(
 	// Use gill's getExplorerLink for standard clusters
 	return getExplorerLink({ 
 		transaction: signature,
-		cluster: normalizedCluster as any
+		cluster: normalizedCluster
 	})
 }
 
