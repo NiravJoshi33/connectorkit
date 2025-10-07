@@ -5,6 +5,8 @@
  * For complex cases, use the full formatting utilities
  */
 
+import { LAMPORTS_PER_SOL } from "gill"
+
 /**
  * Fast address formatting for display (lightweight version)
  * 
@@ -33,7 +35,7 @@ export function formatSOLSimple(
   decimals = 4,
   suffix = true
 ): string {
-  const sol = lamports / 1_000_000_000
+  const sol = lamports / LAMPORTS_PER_SOL
   const formatted = sol.toFixed(decimals)
   return suffix ? `${formatted} SOL` : formatted
 }

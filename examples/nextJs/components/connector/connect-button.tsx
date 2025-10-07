@@ -44,8 +44,8 @@ export function ConnectButton({ className }: ConnectButtonProps) {
     const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`
     
     // Get wallet icon from wallets list (has proper icons) or fallback to selectedWallet
-    const walletWithIcon = wallets.find(w => w.name === selectedWallet.name)
-    const walletIcon = walletWithIcon?.icon || selectedWallet.icon
+    const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name)
+    const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon
     
 
     return (

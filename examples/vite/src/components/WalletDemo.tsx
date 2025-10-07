@@ -26,15 +26,15 @@ export function WalletDemo() {
               <div className="space-y-2">
                 {wallets?.map((wallet) => (
                   <button
-                    key={wallet.name}
-                    onClick={() => select(wallet.name)}
+                    key={wallet.wallet.name}
+                    onClick={() => select(wallet.wallet.name)}
                     disabled={connecting}
                     className="w-full p-3 text-left border rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-3"
                   >
-                    {wallet.icon && (
-                      <img src={wallet.icon} alt={wallet.name} className="w-6 h-6" />
+                    {wallet.wallet.icon && (
+                      <img src={wallet.wallet.icon} alt={wallet.wallet.name} className="w-6 h-6" />
                     )}
-                    <span>{wallet.name}</span>
+                    <span>{wallet.wallet.name}</span>
                     {!wallet.installed && (
                       <span className="text-xs text-gray-500">(Not Installed)</span>
                     )}
@@ -62,14 +62,14 @@ export function WalletDemo() {
           <div className="grid gap-3">
             {wallets?.map((wallet) => (
               <div
-                key={wallet.name}
+                key={wallet.wallet.name}
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center space-x-3">
-                  {wallet.icon && (
-                    <img src={wallet.icon} alt={wallet.name} className="w-6 h-6" />
+                  {wallet.wallet.icon && (
+                    <img src={wallet.wallet.icon} alt={wallet.wallet.name} className="w-6 h-6" />
                   )}
-                  <span className="font-medium">{wallet.name}</span>
+                  <span className="font-medium">{wallet.wallet.name}</span>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded ${
                   wallet.installed 

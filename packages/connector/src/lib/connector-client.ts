@@ -61,7 +61,7 @@ export class ConnectorClient {
 	private pollTimer: ReturnType<typeof setInterval> | null = null
 	private walletStorage?: StorageAdapter<string | undefined>
 	private clusterStorage?: StorageAdapter<SolanaClusterId>
-	
+
 	// Debug metrics tracking
 	private debugMetrics = {
 		stateUpdates: 0,
@@ -90,7 +90,7 @@ export class ConnectorClient {
 		const startTime = performance.now()
 		let hasChanges = false
 		const nextState = { ...this.state }
-		
+
 		for (const [key, value] of Object.entries(updates)) {
 			const stateKey = key as keyof ConnectorState
 			const currentValue = nextState[stateKey]
@@ -124,7 +124,7 @@ export class ConnectorClient {
 				hasChanges = true
 			}
 		}
-		
+
 		// Track metrics
 		const updateTime = performance.now() - startTime
 		this.debugMetrics.updateTimes.push(updateTime)
@@ -133,17 +133,17 @@ export class ConnectorClient {
 			this.debugMetrics.updateTimes.shift()
 		}
 		this.debugMetrics.lastUpdateTime = Date.now()
-		
+
 		// Only update state and notify if there are actual changes
 		if (hasChanges) {
 			this.debugMetrics.stateUpdates++
 			this.state = nextState
-			
+
 			// Log state changes in debug mode
 			if (this.config.debug) {
 				console.log('[Connector] State updated:', Object.keys(updates).join(', '))
 			}
-			
+
 			if (immediate) {
 				this.notifyImmediate()
 			} else {
@@ -151,7 +151,7 @@ export class ConnectorClient {
 			}
 		} else {
 			this.debugMetrics.noopUpdates++
-			
+
 			if (this.config.debug) {
 				// Debug logging for no-op updates
 				console.log('[Connector] State update skipped (no changes):', Object.keys(updates).join(', '))
@@ -258,18 +258,18 @@ export class ConnectorClient {
 	constructor(private config: ConnectorConfig = {}) {
 		const clusterConfig = config.cluster
 		const clusters = clusterConfig?.clusters ?? []
-		
+
 		// Set up storage adapters
 		if (this.config.storage) {
 			this.walletStorage = this.config.storage.wallet
 			this.clusterStorage = this.config.storage.cluster
 		}
-		
+
 		// Determine initial cluster from storage or config
 		const storedClusterId = this.clusterStorage?.get()
 		const initialClusterId = storedClusterId ?? clusterConfig?.initialCluster ?? 'solana:mainnet'
 		const initialCluster = clusters.find(c => c.id === initialClusterId) ?? clusters[0] ?? null
-		
+
 		this.state = {
 			wallets: [],
 			selectedWallet: null,
@@ -280,7 +280,7 @@ export class ConnectorClient {
 			cluster: initialCluster,
 			clusters,
 		}
-		
+
 		this.initialize()
 	}
 
@@ -305,9 +305,9 @@ export class ConnectorClient {
 	 */
 	private isWalletAvailableDirectly(walletName: string): any {
 		if (typeof window === 'undefined') return null
-		
+
 		const name = walletName.toLowerCase()
-		
+
 		// Check common wallet injection patterns
 		const checks = [
 			() => (window as any)[name],           // window.phantom, window.backpack
@@ -319,7 +319,7 @@ export class ConnectorClient {
 				return keys.length > 0 ? (window as any)[keys[0]] : null
 			}
 		]
-		
+
 		for (const check of checks) {
 			try {
 				const result = check()
@@ -335,7 +335,7 @@ export class ConnectorClient {
 				continue
 			}
 		}
-		
+
 		return null
 	}
 
@@ -346,35 +346,35 @@ export class ConnectorClient {
 	private async attemptInstantAutoConnect(): Promise<boolean> {
 		const storedWalletName = this.getStoredWallet()
 		if (!storedWalletName) return false
-		
+
 		const directWallet = this.isWalletAvailableDirectly(storedWalletName)
 		if (!directWallet) return false
-		
+
 		if (this.config.debug) {
 			console.log('⚡ Instant auto-connect: found', storedWalletName, 'directly in window')
 		}
-		
+
 		try {
 			// Create proper features object for direct wallet
 			const features: any = {}
-			
+
 			// Map direct wallet methods to wallet standard features
 			if (directWallet.connect) {
 				features['standard:connect'] = {
 					connect: async (options: any = {}) => {
 						// Try connection
 						const result = await directWallet.connect(options)
-						
+
 						if (this.config.debug) {
 							console.log('🔍 Direct wallet connect result:', result)
 							console.log('🔍 Direct wallet publicKey property:', directWallet.publicKey)
 						}
-						
+
 						// Strategy 1: Check if result has proper wallet standard format
 						if (result && result.accounts && Array.isArray(result.accounts)) {
 							return result // Already wallet standard format
 						}
-						
+
 						// Strategy 2: Check if result has legacy publicKey format  
 						if (result && result.publicKey && typeof result.publicKey.toString === 'function') {
 							return {
@@ -386,7 +386,7 @@ export class ConnectorClient {
 								}]
 							}
 						}
-						
+
 						// Strategy 3: Legacy wallet pattern - publicKey on wallet object (Solflare, etc.)
 						if (directWallet.publicKey && typeof directWallet.publicKey.toString === 'function') {
 							const address = directWallet.publicKey.toString()
@@ -402,7 +402,7 @@ export class ConnectorClient {
 								}]
 							}
 						}
-						
+
 						// Strategy 4: Check if result itself is a publicKey
 						if (result && typeof result.toString === 'function' && result.toString().length > 30) {
 							return {
@@ -414,7 +414,7 @@ export class ConnectorClient {
 								}]
 							}
 						}
-						
+
 						// No valid account found
 						if (this.config.debug) {
 							console.error('❌ Legacy wallet: No valid publicKey found in any expected location')
@@ -438,21 +438,21 @@ export class ConnectorClient {
 					signMessage: directWallet.signMessage.bind(directWallet)
 				}
 			}
-			
+
 			// If wallet already has proper features, use them
 			if (directWallet.features) {
 				Object.assign(features, directWallet.features)
 			}
-			
+
 			// Create a minimal wallet object for immediate connection
 			// Check multiple common icon property locations
-			const walletIcon = directWallet.icon || 
-							  directWallet._metadata?.icon ||
-							  directWallet.adapter?.icon ||
-							  directWallet.metadata?.icon ||
-							  (directWallet as any).iconUrl ||
-							  undefined
-			
+			const walletIcon = directWallet.icon ||
+				directWallet._metadata?.icon ||
+				directWallet.adapter?.icon ||
+				directWallet.metadata?.icon ||
+				(directWallet as any).iconUrl ||
+				undefined
+
 			const wallet: Wallet = {
 				version: '1.0.0' as const,
 				name: storedWalletName,
@@ -461,7 +461,7 @@ export class ConnectorClient {
 				features,
 				accounts: directWallet.accounts || []
 			}
-			
+
 			// Add to state immediately for instant UI feedback
 			this.updateState({
 				wallets: [{
@@ -470,23 +470,23 @@ export class ConnectorClient {
 					connectable: true
 				}]
 			}, true) // Use immediate notification
-			
+
 			// Connect immediately
 			if (this.config.debug) {
 				console.log('🔄 Attempting to connect to', storedWalletName, 'via instant auto-connect')
 			}
-			
+
 			await this.select(storedWalletName)
-			
+
 			if (this.config.debug) {
 				console.log('✅ Instant auto-connect successful for', storedWalletName)
 			}
-			
+
 			// Force wallet list update after successful connection to get proper icons
 			setTimeout(() => {
 				const walletsApi = getWalletsRegistry()
 				const ws = walletsApi.get()
-				
+
 				if (this.config.debug) {
 					console.log('🔍 Checking for wallet standard update:', {
 						wsLength: ws.length,
@@ -494,21 +494,21 @@ export class ConnectorClient {
 						shouldUpdate: ws.length > 1
 					})
 				}
-				
-			if (ws.length > 1) { // Only update if we have more wallets than just our connected one
-				const unique = this.deduplicateWallets(ws)
-				this.updateState({
-					wallets: unique.map(w => this.mapToWalletInfo(w))
-				})
-				
-				console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
-			} else {
-				console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
-			}
+
+				if (ws.length > 1) { // Only update if we have more wallets than just our connected one
+					const unique = this.deduplicateWallets(ws)
+					this.updateState({
+						wallets: unique.map(w => this.mapToWalletInfo(w))
+					})
+
+					console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
+				} else {
+					console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
+				}
 			}, 500) // Faster icon update
-			
+
 			return true
-			
+
 		} catch (error) {
 			if (this.config.debug) {
 				console.error('❌ Instant auto-connect failed for', storedWalletName + ':', error instanceof Error ? error.message : error)
@@ -518,13 +518,13 @@ export class ConnectorClient {
 	}
 
 	private initialized = false
-	
+
 	private initialize() {
 		if (typeof window === 'undefined') return
 		// Prevent double initialization
 		if (this.initialized) return
 		this.initialized = true
-		
+
 		try {
 			// Try instant auto-connect FIRST (for reconnection speed)
 			// But delay slightly to avoid hydration mismatch
@@ -538,48 +538,48 @@ export class ConnectorClient {
 					})
 				}, 100) // Small delay to avoid hydration issues
 			}
-			
-		const walletsApi = getWalletsRegistry()
-		const update = () => {
-			const ws = walletsApi.get()
-			const previousCount = this.state.wallets.length
-			const newCount = ws.length
-			
-			if (this.config.debug && newCount !== previousCount) {
-				console.log('🔍 ConnectorClient: found wallets:', newCount)
-			}
-			
-			const unique = this.deduplicateWallets(ws)
-			
-			// Update wallet list for UI, but don't interfere with connection state
-			// This ensures the connect button has access to wallet icons
-			this.updateState({
-				wallets: unique.map(w => this.mapToWalletInfo(w))
-			})
-			
-			// Emit wallet detection event if count changed
-			if (newCount !== previousCount && newCount > 0) {
-				this.emit({
-					type: 'wallets:detected',
-					count: newCount,
-					timestamp: new Date().toISOString()
+
+			const walletsApi = getWalletsRegistry()
+			const update = () => {
+				const ws = walletsApi.get()
+				const previousCount = this.state.wallets.length
+				const newCount = ws.length
+
+				if (this.config.debug && newCount !== previousCount) {
+					console.log('🔍 ConnectorClient: found wallets:', newCount)
+				}
+
+				const unique = this.deduplicateWallets(ws)
+
+				// Update wallet list for UI, but don't interfere with connection state
+				// This ensures the connect button has access to wallet icons
+				this.updateState({
+					wallets: unique.map(w => this.mapToWalletInfo(w))
 				})
+
+				// Emit wallet detection event if count changed
+				if (newCount !== previousCount && newCount > 0) {
+					this.emit({
+						type: 'wallets:detected',
+						count: newCount,
+						timestamp: new Date().toISOString()
+					})
+				}
 			}
-		}
-			
+
 			// Initial update for wallet discovery
 			update()
-			
+
 			// Subscribe to wallet changes for discovery (not critical for reconnection)
 			this.unsubscribers.push(walletsApi.on('register', update))
 			this.unsubscribers.push(walletsApi.on('unregister', update))
-			
+
 			// Minimal wallet discovery - only if instant connection failed
 			if (!this.state.connected) {
 				setTimeout(() => {
 					if (!this.state.connected) {
-					update()
-				}
+						update()
+					}
 				}, 1000)
 			}
 		} catch (e) {
@@ -596,14 +596,14 @@ export class ConnectorClient {
 				}
 				return
 			}
-			
+
 			const last = this.getStoredWallet()
 			if (this.config.debug) {
 				console.log('🔄 Auto-connect: stored wallet =', last)
 				console.log('🔄 Auto-connect: available wallets =', this.state.wallets.map(w => w.wallet.name))
 			}
 			if (!last) return
-			
+
 			const walletFound = this.state.wallets.some(w => w.wallet.name === last)
 			if (walletFound) {
 				if (this.config.debug) {
@@ -645,13 +645,13 @@ export class ConnectorClient {
 		if (this.notifyTimeout) {
 			clearTimeout(this.notifyTimeout)
 		}
-		
+
 		this.notifyTimeout = setTimeout(() => {
 			this.listeners.forEach(l => l(this.state))
 			this.notifyTimeout = undefined
 		}, 16) // One frame delay - smooth but responsive
 	}
-	
+
 	private notifyImmediate() {
 		// For critical updates that need immediate notification
 		if (this.notifyTimeout) {
@@ -695,7 +695,7 @@ export class ConnectorClient {
 	private subscribeToWalletEvents() {
 		// Cleanup existing subscription if present
 		if (this.walletChangeUnsub) {
-			try { this.walletChangeUnsub() } catch {}
+			try { this.walletChangeUnsub() } catch { }
 			this.walletChangeUnsub = null
 		}
 		this.stopPollingWalletAccounts()
@@ -738,14 +738,14 @@ export class ConnectorClient {
 		if (typeof window === 'undefined') return
 		const w = this.state.wallets.find(x => x.wallet.name === walletName)
 		if (!w) throw new Error(`Wallet ${walletName} not found`)
-		
+
 		// Emit connecting event
 		this.emit({
 			type: 'connecting',
 			wallet: walletName,
 			timestamp: new Date().toISOString()
 		})
-		
+
 		this.updateState({ connecting: true }, true) // Critical UI state - notify immediately
 		try {
 			const connect = getConnectFeature(w.wallet)
@@ -759,12 +759,12 @@ export class ConnectorClient {
 			const accountMap = new Map<string, WalletAccount>()
 			for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a)
 			const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a))
-				// Prefer a never-before-seen account when reconnecting; otherwise preserve selection
-				const previouslySelected = this.state.selectedAccount
-				const previousAddresses = new Set(this.state.accounts.map(a => a.address))
-				const firstNew = accounts.find(a => !previousAddresses.has(a.address))
-				const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null
-			
+			// Prefer a never-before-seen account when reconnecting; otherwise preserve selection
+			const previouslySelected = this.state.selectedAccount
+			const previousAddresses = new Set(this.state.accounts.map(a => a.address))
+			const firstNew = accounts.find(a => !previousAddresses.has(a.address))
+			const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null
+
 			// Successfully connected to wallet
 			this.updateState({
 				selectedWallet: w.wallet,
@@ -773,7 +773,7 @@ export class ConnectorClient {
 				accounts,
 				selectedAccount: selected,
 			}, true) // Critical state change - notify immediately
-			
+
 			if (this.config.debug) {
 				console.log('✅ Connection successful - state updated:', {
 					connected: this.state.connected,
@@ -782,7 +782,7 @@ export class ConnectorClient {
 					accountsCount: this.state.accounts.length
 				})
 			}
-			
+
 			// Emit connection success event
 			this.emit({
 				type: 'wallet:connected',
@@ -790,13 +790,13 @@ export class ConnectorClient {
 				account: this.state.selectedAccount || '',
 				timestamp: new Date().toISOString()
 			})
-			
+
 			this.setStoredWallet(walletName)
 			// Subscribe to wallet change events (or start polling if unavailable)
 			this.subscribeToWalletEvents()
 		} catch (e) {
 			const errorMessage = e instanceof Error ? e.message : String(e)
-			
+
 			// Emit connection failure event
 			this.emit({
 				type: 'connection:failed',
@@ -804,7 +804,7 @@ export class ConnectorClient {
 				error: errorMessage,
 				timestamp: new Date().toISOString()
 			})
-			
+
 			// Also emit generic error event
 			this.emit({
 				type: 'error',
@@ -826,7 +826,7 @@ export class ConnectorClient {
 	async disconnect(): Promise<void> {
 		// Cleanup wallet event listener
 		if (this.walletChangeUnsub) {
-			try { this.walletChangeUnsub() } catch {}
+			try { this.walletChangeUnsub() } catch { }
 			this.walletChangeUnsub = null
 		}
 		this.stopPollingWalletAccounts()
@@ -851,27 +851,27 @@ export class ConnectorClient {
 			accounts: [],
 			selectedAccount: null
 		}, true) // Critical state change - notify immediately
-		
+
 		// Emit disconnection event
 		this.emit({
 			type: 'wallet:disconnected',
 			timestamp: new Date().toISOString()
 		})
-		
+
 		this.removeStoredWallet()
-		
+
 		// Force wallet discovery after disconnect to show available wallets
 		setTimeout(() => {
 			if (!this.state.connected) {
-			// Re-run wallet discovery
-			const walletsApi = getWalletsRegistry()
-			const ws = walletsApi.get()
-			if (ws.length > 0) {
-				const unique = this.deduplicateWallets(ws)
-				this.updateState({
-					wallets: unique.map(w => this.mapToWalletInfo(w))
-				})
-			}
+				// Re-run wallet discovery
+				const walletsApi = getWalletsRegistry()
+				const ws = walletsApi.get()
+				if (ws.length > 0) {
+					const unique = this.deduplicateWallets(ws)
+					this.updateState({
+						wallets: unique.map(w => this.mapToWalletInfo(w))
+					})
+				}
 			}
 		}, 100)
 	}
@@ -903,14 +903,14 @@ export class ConnectorClient {
 	destroy(): void {
 		// Unsubscribe wallet change listener
 		if (this.walletChangeUnsub) {
-			try { this.walletChangeUnsub() } catch {}
+			try { this.walletChangeUnsub() } catch { }
 			this.walletChangeUnsub = null
 		}
 		// Stop any polling timers
 		this.stopPollingWalletAccounts()
 		// Unsubscribe from wallets API events
 		for (const unsubscribe of this.unsubscribers) {
-			try { unsubscribe() } catch {}
+			try { unsubscribe() } catch { }
 		}
 		this.unsubscribers = []
 		// Clear external store listeners
@@ -927,14 +927,14 @@ export class ConnectorClient {
 		if (!cluster) {
 			throw new Error(`Cluster ${clusterId} not found. Available clusters: ${this.state.clusters.map(c => c.id).join(', ')}`)
 		}
-		
+
 		this.updateState({ cluster }, true) // Critical state change - notify immediately
-		
+
 		// Persist cluster selection if storage is configured
 		if (this.clusterStorage) {
 			this.clusterStorage.set(clusterId)
 		}
-		
+
 		// Emit cluster change event (only if actually changed)
 		if (previousClusterId !== clusterId) {
 			this.emit({
@@ -944,7 +944,7 @@ export class ConnectorClient {
 				timestamp: new Date().toISOString()
 			})
 		}
-		
+
 		if (this.config.debug) {
 			console.log('🌐 Cluster changed:', { from: previousClusterId, to: clusterId })
 		}
@@ -986,13 +986,13 @@ export class ConnectorClient {
 	 */
 	getHealth(): ConnectorHealth {
 		const errors: string[] = []
-		
+
 		// Check Wallet Standard availability
 		let walletStandardAvailable = false
 		try {
 			const registry = getWalletsRegistry()
 			walletStandardAvailable = Boolean(registry && typeof registry.get === 'function')
-			
+
 			if (!walletStandardAvailable) {
 				errors.push('Wallet Standard registry not properly initialized')
 			}
@@ -1000,7 +1000,7 @@ export class ConnectorClient {
 			errors.push(`Wallet Standard error: ${error instanceof Error ? error.message : 'Unknown error'}`)
 			walletStandardAvailable = false
 		}
-		
+
 		// Check storage availability
 		let storageAvailable = false
 		try {
@@ -1023,7 +1023,7 @@ export class ConnectorClient {
 						storageAvailable = false
 					}
 				}
-				
+
 				if (!storageAvailable) {
 					errors.push('localStorage unavailable (private browsing mode or quota exceeded)')
 				}
@@ -1032,20 +1032,20 @@ export class ConnectorClient {
 			errors.push(`Storage error: ${error instanceof Error ? error.message : 'Unknown error'}`)
 			storageAvailable = false
 		}
-		
+
 		// Validate connection state consistency
 		if (this.state.connected && !this.state.selectedWallet) {
 			errors.push('Inconsistent state: marked as connected but no wallet selected')
 		}
-		
+
 		if (this.state.connected && !this.state.selectedAccount) {
 			errors.push('Inconsistent state: marked as connected but no account selected')
 		}
-		
+
 		if (this.state.connecting && this.state.connected) {
 			errors.push('Inconsistent state: both connecting and connected flags are true')
 		}
-		
+
 		return {
 			initialized: this.initialized,
 			walletStandardAvailable,
@@ -1149,7 +1149,7 @@ export class ConnectorClient {
 		if (this.config.debug) {
 			console.log('[Connector Event]', event.type, event)
 		}
-		
+
 		// Call all event listeners
 		this.eventListeners.forEach(listener => {
 			try {
@@ -1179,14 +1179,14 @@ export class ConnectorClient {
 	 */
 	getDebugMetrics(): ConnectorDebugMetrics {
 		const totalUpdates = this.debugMetrics.stateUpdates + this.debugMetrics.noopUpdates
-		const optimizationRate = totalUpdates > 0 
+		const optimizationRate = totalUpdates > 0
 			? Math.round((this.debugMetrics.noopUpdates / totalUpdates) * 100)
 			: 0
-		
+
 		const avgUpdateTime = this.debugMetrics.updateTimes.length > 0
 			? this.debugMetrics.updateTimes.reduce((a, b) => a + b, 0) / this.debugMetrics.updateTimes.length
 			: 0
-		
+
 		return {
 			stateUpdates: this.debugMetrics.stateUpdates,
 			noopUpdates: this.debugMetrics.noopUpdates,

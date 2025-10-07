@@ -36,7 +36,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     if (isClient && open) {
       console.log('🔍 WalletModal Debug:', {
         walletsCount: wallets.length,
-        wallets: wallets.map(w => ({ name: w.name, installed: w.installed })),
+        wallets: wallets.map(w => ({ name: w.wallet.name, installed: w.installed })),
         isClient,
         open,
       })
@@ -98,21 +98,21 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                   </div>
                   <div className="grid gap-2">
                     {installedWallets.map((walletInfo) => {
-                      const isConnecting = connectingWallet === walletInfo.name
+                      const isConnecting = connectingWallet === walletInfo.wallet.name
 
                       return (
                         <Button
-                          key={walletInfo.name}
+                          key={walletInfo.wallet.name}
                           variant="outline"
                           className="h-auto justify-start p-4 hover:bg-accent"
-                          onClick={() => handleSelectWallet(walletInfo.name)}
+                          onClick={() => handleSelectWallet(walletInfo.wallet.name)}
                           disabled={connecting || isConnecting}
                         >
                           <Avatar className="mr-3 h-10 w-10">
-                            {walletInfo.icon && (
+                            {walletInfo.wallet.icon && (
                               <AvatarImage 
-                                src={walletInfo.icon} 
-                                alt={walletInfo.name}
+                                src={walletInfo.wallet.icon} 
+                                alt={walletInfo.wallet.name}
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none'
                                 }}
@@ -123,7 +123,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-sm">{walletInfo.name}</div>
+                            <div className="font-semibold text-sm">{walletInfo.wallet.name}</div>
                             <div className="text-xs text-muted-foreground">
                               {isConnecting ? "Connecting..." : "Ready to connect"}
                             </div>
@@ -149,17 +149,17 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                     <div className="grid gap-2">
                       {notInstalledWallets.slice(0, 3).map((walletInfo) => (
                         <Button
-                          key={walletInfo.name}
+                          key={walletInfo.wallet.name}
                           variant="outline"
                           className="h-auto justify-between p-4"
-                          onClick={() => window.open(getInstallUrl(walletInfo.name), "_blank")}
+                          onClick={() => window.open(getInstallUrl(walletInfo.wallet.name), "_blank")}
                         >
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              {walletInfo.icon && (
+                              {walletInfo.wallet.icon && (
                                 <AvatarImage 
-                                  src={walletInfo.icon} 
-                                  alt={walletInfo.name}
+                                  src={walletInfo.wallet.icon} 
+                                  alt={walletInfo.wallet.name}
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none'
                                   }}
@@ -170,7 +170,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                               </AvatarFallback>
                             </Avatar>
                             <div className="text-left">
-                              <div className="font-medium text-sm">{walletInfo.name}</div>
+                              <div className="font-medium text-sm">{walletInfo.wallet.name}</div>
                               <div className="text-xs text-muted-foreground">Not installed</div>
                             </div>
                           </div>
