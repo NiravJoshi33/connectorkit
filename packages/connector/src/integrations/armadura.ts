@@ -10,6 +10,7 @@
 
 import { useCallback } from 'react'
 import { useConnectorClient } from '../ui/connector-provider'
+import { assertIsSignature, Signature } from 'gill';
 
 /**
  * Armadura transaction types (generic for compatibility)
@@ -47,13 +48,14 @@ export function useArmaduraTransaction(
   const client = useConnectorClient()
 
   const sendTransaction = useCallback(
-    async (params: any): Promise<{ signature: string; confirmed: boolean }> => {
-      let signature: string | undefined
+    async (params: any): Promise<{ signature: Signature; confirmed: boolean }> => {
+      let signature: Signature | undefined
       
       try {
         // Call original Armadura sendTransaction
         const result = await armaduraHook.sendTransaction(params)
-        signature = result.signature
+        signature = result.signature as Signature
+        assertIsSignature(signature)
 
         // Track in debug panel immediately
         if (client?.trackTransaction) {
@@ -80,7 +82,10 @@ export function useArmaduraTransaction(
           console.warn('[Connector] Client not available for tracking')
         }
 
-        return result
+        return {
+          signature: signature as Signature,
+          confirmed: result.confirmed
+        }
       } catch (error) {
         console.error('[Connector] Transaction failed:', error)
         
@@ -100,13 +105,14 @@ export function useArmaduraTransaction(
     async (
       tx: { wireTransaction: Uint8Array },
       config?: any
-    ): Promise<{ signature: string; confirmed: boolean }> => {
+    ): Promise<{ signature: Signature; confirmed: boolean }> => {
       let signature: string | undefined
       
       try {
         // Call original Armadura sendPrebuilt
         const result = await armaduraHook.sendPrebuilt(tx, config)
-        signature = result.signature
+        signature = result.signature as Signature
+        assertIsSignature(signature)
 
         // Track in debug panel
         if (client?.trackTransaction) {
@@ -128,7 +134,10 @@ export function useArmaduraTransaction(
           }
         }
 
-        return result
+        return {
+          signature: signature as Signature,
+          confirmed: result.confirmed
+        }
       } catch (error) {
         // Track failure
         if (signature && client?.updateTransactionStatus) {
@@ -190,7 +199,7 @@ export function withTransactionTracking<T extends (...args: any[]) => Promise<{ 
       // Track transaction
       if (client?.trackTransaction) {
         client.trackTransaction({
-          signature: result.signature,
+          signature: result.signature as Signature,
           status: result.confirmed ? 'confirmed' : 'pending',
           method: options.method,
           metadata: {

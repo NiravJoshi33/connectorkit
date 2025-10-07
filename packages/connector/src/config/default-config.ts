@@ -14,6 +14,7 @@ import {
 } from '../lib/enhanced-storage'
 import { toClusterId } from '../utils/network'
 import type React from 'react'
+import { isAddress } from 'gill'
 
 export interface DefaultConfigOptions {
   /** Application name shown in wallet connection prompts */
@@ -109,7 +110,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         validator: (address) => {
           // Validate Solana address format
           if (!address) return true
-          return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
+          return isAddress(address)
         },
         onError: (error) => {
           if (debug) {

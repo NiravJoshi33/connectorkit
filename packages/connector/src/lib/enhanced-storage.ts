@@ -236,7 +236,7 @@ export interface EnhancedStorageAccountOptions {
  * const storage = createEnhancedStorageAccount({
  *   validator: (address) => {
  *     if (!address) return true
- *     return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
+ *     return isAddress(address)
  *   }
  * })
  * ```
