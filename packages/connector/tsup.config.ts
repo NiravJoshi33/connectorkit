@@ -18,10 +18,12 @@ export default defineConfig({
   minify: process.env.NODE_ENV === 'production',
   splitting: true,
   external: [
-    'react', 
-    'react-dom', 
+    'react',
+    'react-dom',
     '@wallet-ui/core',
     '@wallet-standard/app',
+    '@wallet-standard/base',
+    '@wallet-standard/features',
     '@solana-mobile/wallet-standard-mobile',
   ],
   esbuildOptions: (options) => {

@@ -1,6 +1,50 @@
 import { getWalletsRegistry, type Wallet, type WalletAccount } from './wallet-standard-shim'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
 import type { StorageAdapter } from './enhanced-storage'
+import { Address, debug, Signature } from 'gill'
+import type {
+	StandardConnectFeature,
+	StandardConnectMethod,
+	StandardDisconnectFeature,
+	StandardDisconnectMethod,
+	StandardEventsFeature,
+	StandardEventsOnMethod
+} from '@wallet-standard/features'
+
+// ============================================================================
+// Type-safe feature accessors
+// ============================================================================
+
+/**
+ * Type-safe accessor for standard:connect feature
+ */
+function getConnectFeature(wallet: Wallet): StandardConnectMethod | null {
+	const feature = wallet.features['standard:connect'] as StandardConnectFeature['standard:connect'] | undefined
+	return feature?.connect ?? null
+}
+
+/**
+ * Type-safe accessor for standard:disconnect feature
+ */
+function getDisconnectFeature(wallet: Wallet): StandardDisconnectMethod | null {
+	const feature = wallet.features['standard:disconnect'] as StandardDisconnectFeature['standard:disconnect'] | undefined
+	return feature?.disconnect ?? null
+}
+
+/**
+ * Type-safe accessor for standard:events feature
+ */
+function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
+	const feature = wallet.features['standard:events'] as StandardEventsFeature['standard:events'] | undefined
+	return feature?.on ?? null
+}
+
+/**
+ * Check if wallet has a specific feature
+ */
+function hasFeature(wallet: Wallet, featureName: string): boolean {
+	return featureName in wallet.features && (wallet.features as Record<string, unknown>)[featureName] !== undefined
+}
 
 export interface WalletInfo {
 	wallet: Wallet
@@ -12,7 +56,7 @@ export interface WalletInfo {
 }
 
 export interface AccountInfo {
-	address: string
+	address: Address
 	icon?: string
 	raw: WalletAccount
 }
@@ -69,7 +113,7 @@ export interface ConnectorDebugMetrics {
  */
 export interface TransactionActivity {
 	/** Transaction signature */
-	signature: string
+	signature: Signature
 	/** When the transaction was sent */
 	timestamp: string
 	/** Transaction status */
@@ -79,7 +123,7 @@ export interface TransactionActivity {
 	/** Cluster where transaction was sent */
 	cluster: string
 	/** Fee payer address */
-	feePayer?: string
+	feePayer?: Address
 	/** Method used (signAndSendTransaction, sendTransaction, etc) */
 	method: string
 	/** Additional metadata */
@@ -193,28 +237,32 @@ export class ConnectorClient {
 		for (const [key, value] of Object.entries(updates)) {
 			const stateKey = key as keyof ConnectorState
 			const currentValue = nextState[stateKey]
-			
+
 			// Array comparison (wallets, accounts, clusters)
 			if (Array.isArray(value) && Array.isArray(currentValue)) {
-				if (!this.arraysEqual(value, currentValue as any[])) {
+				// Use type assertion for array comparison since we have mixed array types
+				if (!this.arraysEqual(value as readonly unknown[], currentValue as readonly unknown[])) {
+					// Type assertion needed for dynamic key assignment
 					(nextState as any)[stateKey] = value
 					hasChanges = true
 				}
 			}
 			// Object comparison (wallet, cluster)
 			else if (
-				value && 
-				typeof value === 'object' && 
-				currentValue && 
+				value &&
+				typeof value === 'object' &&
+				currentValue &&
 				typeof currentValue === 'object'
 			) {
-				if (!this.objectsEqual(value, currentValue as any)) {
+				if (!this.objectsEqual(value, currentValue)) {
+					// Type assertion needed for dynamic key assignment
 					(nextState as any)[stateKey] = value
 					hasChanges = true
 				}
 			}
 			// Primitive comparison (strings, booleans, numbers)
 			else if (currentValue !== value) {
+				// Type assertion needed for dynamic key assignment
 				(nextState as any)[stateKey] = value
 				hasChanges = true
 			}
@@ -257,19 +305,27 @@ export class ConnectorClient {
 	/**
 	 * Fast array equality check for wallet/account arrays
 	 */
-	private arraysEqual(a: any[], b: any[]): boolean {
+	private arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
 		if (a.length !== b.length) return false
-		
+
 		// For wallet arrays, compare by name
-		if (a[0]?.name && b[0]?.name) {
-			return a.every((item, i) => item.name === b[i]?.name)
+		if (a[0] && typeof a[0] === 'object' && 'name' in a[0] && b[0] && typeof b[0] === 'object' && 'name' in b[0]) {
+			return a.every((item, i) => {
+				const aItem = item as { name: string }
+				const bItem = b[i] as { name: string }
+				return aItem.name === bItem?.name
+			})
 		}
-		
+
 		// For account arrays, compare by address
-		if (a[0]?.address && b[0]?.address) {
-			return a.every((item, i) => item.address === b[i]?.address)
+		if (a[0] && typeof a[0] === 'object' && 'address' in a[0] && b[0] && typeof b[0] === 'object' && 'address' in b[0]) {
+			return a.every((item, i) => {
+				const aItem = item as { address: string }
+				const bItem = b[i] as { address: string }
+				return aItem.address === bItem?.address
+			})
 		}
-		
+
 		// Fallback to reference equality
 		return a === b
 	}
@@ -278,42 +334,40 @@ export class ConnectorClient {
 	 * Deep equality check for objects
 	 * Used to prevent unnecessary state updates when object contents haven't changed
 	 */
-	private objectsEqual(a: any, b: any): boolean {
+	private objectsEqual(a: unknown, b: unknown): boolean {
 		// Reference equality (fast path)
 		if (a === b) return true
-		
+
 		// Null/undefined checks
 		if (!a || !b) return false
 		if (typeof a !== 'object' || typeof b !== 'object') return false
-		
+
 		// Get keys
 		const keysA = Object.keys(a)
 		const keysB = Object.keys(b)
-		
+
 		// Different number of keys
 		if (keysA.length !== keysB.length) return false
-		
+
 		// Compare each key's value (shallow comparison for nested objects)
-		return keysA.every(key => a[key] === b[key])
+		return keysA.every(key => (a as Record<string, unknown>)[key] === (b as Record<string, unknown>)[key])
 	}
 
 	/**
 	 * Convert a Wallet Standard wallet to WalletInfo with capability checks
 	 */
 	private mapToWalletInfo(wallet: Wallet): WalletInfo {
-		const features = (wallet.features as any) || {}
-		const hasConnect = Boolean(features['standard:connect'])
-		const hasDisconnect = Boolean(features['standard:disconnect'])
-		const chains = (wallet as any)?.chains as unknown as string[] | undefined
-		const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
-		const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
-		
-		return { 
-			wallet, 
-			name: wallet.name, 
-			icon: wallet.icon, 
-			installed: true, 
-			connectable 
+		const hasConnect = hasFeature(wallet, 'standard:connect')
+		const hasDisconnect = hasFeature(wallet, 'standard:disconnect')
+		const isSolana = Array.isArray(wallet.chains) && wallet.chains.some(c => typeof c === 'string' && c.includes('solana'))
+		const connectable = hasConnect && hasDisconnect && isSolana
+
+		return {
+			wallet,
+			name: wallet.name,
+			icon: wallet.icon,
+			installed: true,
+			connectable
 		} satisfies WalletInfo
 	}
 
@@ -334,9 +388,9 @@ export class ConnectorClient {
 	/**
 	 * Convert wallet account to AccountInfo
 	 */
-	private toAccountInfo(account: any): AccountInfo {
+	private toAccountInfo(account: WalletAccount): AccountInfo {
 		return {
-			address: account.address as string,
+			address: account.address as Address,
 			icon: account.icon,
 			raw: account
 		}
@@ -545,6 +599,7 @@ export class ConnectorClient {
 							  undefined
 			
 			const wallet: Wallet = {
+				version: '1.0.0' as const,
 				name: storedWalletName,
 				icon: walletIcon,
 				chains: directWallet.chains || ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
@@ -757,13 +812,13 @@ export class ConnectorClient {
 		if (this.pollTimer) return
 		const wallet = this.state.selectedWallet
 		if (!wallet) return
-		
+
 		// Simple polling - don't mess with account selection if we have one
 		this.pollTimer = setInterval(() => {
 			try {
-				const walletAccounts = ((wallet as any)?.accounts ?? []) as any[]
+				const walletAccounts = wallet.accounts
 				const nextAccounts = walletAccounts.map(a => this.toAccountInfo(a))
-				
+
 				// Only update if we don't have accounts yet or they actually changed
 				if (this.state.accounts.length === 0 && nextAccounts.length > 0) {
 					this.updateState({
@@ -796,8 +851,8 @@ export class ConnectorClient {
 		if (!wallet) return
 
 		// Check if wallet supports standard:events feature
-		const eventsFeature = (wallet.features as any)?.['standard:events']
-		if (!eventsFeature?.on) {
+		const eventsOn = getEventsFeature(wallet)
+		if (!eventsOn) {
 			// Fallback: start polling wallet.accounts when events are not available
 			this.startPollingWalletAccounts()
 			return
@@ -805,13 +860,13 @@ export class ConnectorClient {
 
 		try {
 			// Subscribe to change events - but don't interfere with account selection
-			this.walletChangeUnsub = eventsFeature.on('change', (properties: any) => {
+			this.walletChangeUnsub = eventsOn('change', (properties) => {
 				// Only handle actual account changes, not selection changes
-				const changeAccounts = (properties?.accounts ?? []) as any[]
+				const changeAccounts = properties?.accounts ?? []
 				if (changeAccounts.length === 0) return
-				
+
 				const nextAccounts = changeAccounts.map(a => this.toAccountInfo(a))
-				
+
 				// Only update accounts, preserve selected account
 				if (nextAccounts.length > 0) {
 					this.updateState({
@@ -840,13 +895,15 @@ export class ConnectorClient {
 		
 		this.updateState({ connecting: true }, true) // Critical UI state - notify immediately
 		try {
-			const connectFeature = (w.wallet.features as any)['standard:connect']
-			if (!connectFeature) throw new Error(`Wallet ${walletName} does not support standard connect`)
-				// Force non-silent connection to ensure wallet prompts for account selection
-				const result = await connectFeature.connect({ silent: false })
+			const connect = getConnectFeature(w.wallet)
+			if (!connect) throw new Error(`Wallet ${walletName} does not support standard connect`)
+
+			// Force non-silent connection to ensure wallet prompts for account selection
+			const result = await connect({ silent: false })
+
 			// Aggregate accounts from result and wallet.accounts (some wallets only return the selected account)
-			const walletAccounts = ((w.wallet as any)?.accounts ?? []) as any[]
-			const accountMap = new Map<string, any>()
+			const walletAccounts = w.wallet.accounts
+			const accountMap = new Map<string, WalletAccount>()
 			for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a)
 			const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a))
 				// Prefer a never-before-seen account when reconnecting; otherwise preserve selection
@@ -924,10 +981,10 @@ export class ConnectorClient {
 		// Call wallet's disconnect feature if available
 		const wallet = this.state.selectedWallet
 		if (wallet) {
-			const disconnectFeature = (wallet.features as any)?.['standard:disconnect']
-			if (disconnectFeature?.disconnect) {
+			const disconnect = getDisconnectFeature(wallet)
+			if (disconnect) {
 				try {
-					await disconnectFeature.disconnect()
+					await disconnect()
 					// Called wallet disconnect feature
 				} catch (error) {
 					// Wallet disconnect failed
@@ -969,16 +1026,16 @@ export class ConnectorClient {
 	async selectAccount(address: string): Promise<void> {
 		const current = this.state.selectedWallet
 		if (!current) throw new Error('No wallet connected')
-    let target = this.state.accounts.find((acc: AccountInfo) => acc.address === address)?.raw ?? null
+		let target = this.state.accounts.find((acc: AccountInfo) => acc.address === address)?.raw ?? null
 		if (!target) {
-				try {
-					const feature = (current.features as any)['standard:connect']
-					if (feature) {
-						const res = await feature.connect()
-						const accounts = res.accounts.map((a: any) => this.toAccountInfo(a))
-						target = accounts.find((acc: AccountInfo) => acc.address === address)?.raw ?? res.accounts[0]
-						this.updateState({ accounts })
-					}
+			try {
+				const connect = getConnectFeature(current)
+				if (connect) {
+					const res = await connect()
+					const accounts = res.accounts.map((a) => this.toAccountInfo(a))
+					target = accounts.find((acc: AccountInfo) => acc.address === address)?.raw ?? res.accounts[0]
+					this.updateState({ accounts })
+				}
 			} catch (error) {
 				// Failed to reconnect for account selection
 				throw new Error('Failed to reconnect wallet for account selection')
@@ -1100,8 +1157,8 @@ export class ConnectorClient {
 				storageAvailable = false
 			} else {
 				// Check if the storage adapters have isAvailable method (EnhancedStorage)
-				if ('isAvailable' in this.walletStorage) {
-					storageAvailable = (this.walletStorage as any).isAvailable()
+				if ('isAvailable' in this.walletStorage && typeof this.walletStorage.isAvailable === 'function') {
+					storageAvailable = this.walletStorage.isAvailable()
 				} else if (typeof window !== 'undefined') {
 					// Fallback: check localStorage availability
 					try {
