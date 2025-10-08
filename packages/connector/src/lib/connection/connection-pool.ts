@@ -9,7 +9,7 @@
  */
 
 import type { SolanaCluster } from '@wallet-ui/core';
-import { getClusterRpcUrl } from '../utils/cluster';
+import { getClusterRpcUrl } from '../../utils/cluster';
 
 /**
  * Minimal connection interface

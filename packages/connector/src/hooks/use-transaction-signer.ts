@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
-import { createTransactionSigner, type TransactionSigner } from '../lib/transaction-signer';
+import { createTransactionSigner, type TransactionSigner } from '../lib/transaction/transaction-signer';
 import type { TransactionSignerCapabilities } from '../types/transactions';
 
 /**

@@ -8,8 +8,8 @@
 // ============================================================================
 // Core Client & Registry
 // ============================================================================
-export { ConnectorClient } from './lib/connector-client';
-export { getWalletsRegistry } from './lib/wallet-standard-shim';
+export { ConnectorClient } from './lib/core/connector-client';
+export { getWalletsRegistry } from './lib/adapters/wallet-standard-shim';
 
 // ============================================================================
 // Configuration
@@ -50,23 +50,23 @@ export type {
     EnhancedStorageWalletOptions,
 } from './types/storage';
 
-export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet-standard-shim';
+export type { WalletStandardWallet, WalletStandardAccount } from './lib/adapters/wallet-standard-shim';
 
 export type { MobileWalletAdapterConfig } from './ui/connector-provider';
 
 // ============================================================================
 // Transaction Signing
 // ============================================================================
-export { createTransactionSigner, TransactionSignerError, isTransactionSignerError } from './lib/transaction-signer';
+export { createTransactionSigner, TransactionSignerError, isTransactionSignerError } from './lib/transaction/transaction-signer';
 
-export type { TransactionSigner } from './lib/transaction-signer';
+export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
 // ============================================================================
 // RPC Connection Pooling
 // ============================================================================
-export { ConnectionPool, getConnectionPool, createConnectionPool } from './lib/connection-pool';
+export { ConnectionPool, getConnectionPool, createConnectionPool } from './lib/connection/connection-pool';
 
-export type { ConnectionLike, ConnectionPoolOptions, ConnectionPoolStats } from './lib/connection-pool';
+export type { ConnectionLike, ConnectionPoolOptions, ConnectionPoolStats } from './lib/connection/connection-pool';
 
 // ============================================================================
 // Storage System
@@ -77,7 +77,7 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
-} from './lib/enhanced-storage';
+} from './lib/adapters/enhanced-storage';
 
 // ============================================================================
 // Error Handling
@@ -95,7 +95,7 @@ export { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSol
 // ============================================================================
 // Browser Compatibility
 // ============================================================================
-export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } from './lib/polyfills';
+export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } from './lib/utils/polyfills';
 
 // ============================================================================
 // Utility Functions
@@ -117,6 +117,6 @@ export {
     getAllExplorerUrls,
     formatSignature,
     copySignature,
-} from './lib/explorer-urls';
+} from './lib/utils/explorer-urls';
 
-export type { ExplorerType, ExplorerOptions } from './lib/explorer-urls';
+export type { ExplorerType, ExplorerOptions } from './lib/utils/explorer-urls';

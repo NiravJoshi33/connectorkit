@@ -2,11 +2,11 @@
 
 import React, { createContext, useContext, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import { ConnectorClient } from '../lib/connector-client';
+import { ConnectorClient } from '../lib/core/connector-client';
 import type { ConnectorConfig } from '../types/connector';
 import type { ExtendedConnectorConfig } from '../config/default-config';
 import { ConnectorErrorBoundary } from './error-boundary';
-import { installPolyfills } from '../lib/polyfills';
+import { installPolyfills } from '../lib/utils/polyfills';
 
 // Install browser compatibility polyfills immediately when module loads
 // This ensures crypto operations work across all browser environments

@@ -18,7 +18,7 @@ import type {
     EnhancedStorageAccountOptions,
     EnhancedStorageClusterOptions,
     EnhancedStorageWalletOptions,
-} from '../types/storage';
+} from '../../types/storage';
 
 /**
  * Enhanced version of wallet-ui's Storage class

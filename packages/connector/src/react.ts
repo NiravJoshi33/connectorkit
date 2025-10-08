@@ -40,7 +40,7 @@ export type { AccountInfo } from './types/accounts';
 
 export type { ConnectorConfig, ConnectorState } from './types/connector';
 
-export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet-standard-shim';
+export type { WalletStandardWallet, WalletStandardAccount } from './lib/adapters/wallet-standard-shim';
 
 // Essential configuration types
 export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config';

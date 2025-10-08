@@ -9,9 +9,9 @@
  * and provides consistent error handling and capability detection.
  */
 
-import type { Wallet, WalletAccount } from '../types/wallets';
+import type { Wallet, WalletAccount } from '../../types/wallets';
 import type { SolanaCluster } from '@wallet-ui/core';
-import type { TransactionSignerConfig, SignedTransaction, TransactionSignerCapabilities } from '../types/transactions';
+import type { TransactionSignerConfig, SignedTransaction, TransactionSignerCapabilities } from '../../types/transactions';
 
 /**
  * Unified transaction signer interface

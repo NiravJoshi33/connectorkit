@@ -57,7 +57,7 @@ export function useAccount(): UseAccountReturn {
 
     // Find the full account object for the selected address
     const account = useMemo(
-        () => accounts.find(a => a.address === selectedAccount) ?? null,
+        () => accounts.find((a: AccountInfo) => a.address === selectedAccount) ?? null,
         [accounts, selectedAccount],
     );
 

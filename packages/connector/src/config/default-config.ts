@@ -6,7 +6,7 @@ import {
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
     EnhancedStorageAdapter,
-} from '../lib/enhanced-storage';
+} from '../lib/adapters/enhanced-storage';
 import { toClusterId } from '../utils/network';
 import type React from 'react';
 import { isAddress } from 'gill';
