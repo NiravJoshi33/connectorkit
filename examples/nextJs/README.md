@@ -22,9 +22,11 @@ Open [http://localhost:3000](http://localhost:3000) to see the components in act
 All components are located in `components/connector/`:
 
 #### **ConnectButton**
+
 A fully-featured wallet connection button with dropdown menu.
 
 **Features:**
+
 - Opens wallet selection modal on click
 - Shows wallet avatar and truncated address when connected
 - Dropdown menu with copy address and disconnect actions
@@ -32,18 +34,21 @@ A fully-featured wallet connection button with dropdown menu.
 - Fully styled with shadcn/ui components
 
 **Usage:**
+
 ```tsx
-import { ConnectButton } from "@/components/connector"
+import { ConnectButton } from '@/components/connector';
 
 export default function Header() {
-  return <ConnectButton />
+    return <ConnectButton />;
 }
 ```
 
 #### **WalletModal**
+
 A dialog for selecting and connecting to Solana wallets.
 
 **Features:**
+
 - Lists all available Solana wallets
 - Shows wallet icons and names
 - Detects installed vs. not installed wallets
@@ -52,6 +57,7 @@ A dialog for selecting and connecting to Solana wallets.
 - Clean, accessible UI with shadcn Dialog
 
 **Usage:**
+
 ```tsx
 import { WalletModal } from "@/components/connector"
 
@@ -61,9 +67,11 @@ const [open, setOpen] = useState(false)
 ```
 
 #### **AccountSwitcher**
+
 A dropdown for switching between multiple wallet accounts.
 
 **Features:**
+
 - Automatically hidden when only one account
 - Dropdown menu showing all accounts
 - Visual indicator for active account
@@ -71,18 +79,21 @@ A dropdown for switching between multiple wallet accounts.
 - Seamless account switching
 
 **Usage:**
+
 ```tsx
-import { AccountSwitcher } from "@/components/connector"
+import { AccountSwitcher } from '@/components/connector';
 
 export default function Header() {
-  return <AccountSwitcher />
+    return <AccountSwitcher />;
 }
 ```
 
 #### **ClusterSelector**
+
 A dropdown for switching between Solana networks.
 
 **Features:**
+
 - Supports Mainnet, Devnet, Testnet, and Localnet
 - Color-coded badges for each network
 - Persists selection across sessions
@@ -90,11 +101,12 @@ A dropdown for switching between Solana networks.
 - Visual indicator for active cluster
 
 **Usage:**
+
 ```tsx
-import { ClusterSelector } from "@/components/connector"
+import { ClusterSelector } from '@/components/connector';
 
 export default function Header() {
-  return <ClusterSelector />
+    return <ClusterSelector />;
 }
 ```
 
@@ -148,21 +160,23 @@ components/
 ### Option 1: Copy Components
 
 1. Install dependencies:
-   ```bash
-   npm install @connector-kit/connector
-   npx shadcn@latest init
-   npx shadcn@latest add button dialog dropdown-menu avatar badge card
-   ```
+
+    ```bash
+    npm install @connector-kit/connector
+    npx shadcn@latest init
+    npx shadcn@latest add button dialog dropdown-menu avatar badge card
+    ```
 
 2. Copy components:
-   ```bash
-   cp -r components/connector your-project/components/
-   ```
+
+    ```bash
+    cp -r components/connector your-project/components/
+    ```
 
 3. Use in your app:
-   ```tsx
-   import { ConnectButton } from "@/components/connector"
-   ```
+    ```tsx
+    import { ConnectButton } from '@/components/connector';
+    ```
 
 ### Option 2: Build Your Own
 

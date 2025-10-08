@@ -3,11 +3,11 @@ name: Publish Packages
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
     inputs:
       publish_packages:
-        description: "Publish @connector-kit/connector package to npm"
+        description: 'Publish @connector-kit/connector package to npm'
         type: boolean
         default: true
 
@@ -27,8 +27,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2

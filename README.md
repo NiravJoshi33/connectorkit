@@ -75,7 +75,7 @@ function WalletButton() {
       </div>
     );
   }
-  
+
   return (
     <div>
       <button onClick={copy}>{formatted}</button>
@@ -101,18 +101,18 @@ Main hook for wallet connection and state.
 import { useConnector } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    // State
-    wallets,         // WalletInfo[] - All available wallets
-    selectedWallet,  // Wallet | null - Currently connected wallet
-    accounts,        // AccountInfo[] - Connected accounts
-    connected,       // boolean - Connection status
-    connecting,      // boolean - Connecting in progress
-    
-    // Actions
-    select,          // (walletName: string) => Promise<void>
-    disconnect,      // () => Promise<void>
-  } = useConnector();
+    const {
+        // State
+        wallets, // WalletInfo[] - All available wallets
+        selectedWallet, // Wallet | null - Currently connected wallet
+        accounts, // AccountInfo[] - Connected accounts
+        connected, // boolean - Connection status
+        connecting, // boolean - Connecting in progress
+
+        // Actions
+        select, // (walletName: string) => Promise<void>
+        disconnect, // () => Promise<void>
+    } = useConnector();
 }
 ```
 
@@ -124,13 +124,13 @@ Hook for working with the connected account.
 import { useAccount } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    address,      // string | null - Full wallet address
-    formatted,    // string - Shortened address (e.g., "5Gv8...x3kF")
-    copy,         // () => Promise<boolean> - Copy address to clipboard
-    copied,       // boolean - True for 2s after copying
-    connected     // boolean - Connection status
-  } = useAccount();
+    const {
+        address, // string | null - Full wallet address
+        formatted, // string - Shortened address (e.g., "5Gv8...x3kF")
+        copy, // () => Promise<boolean> - Copy address to clipboard
+        copied, // boolean - True for 2s after copying
+        connected, // boolean - Connection status
+    } = useAccount();
 }
 ```
 
@@ -142,15 +142,15 @@ Hook for managing Solana network/cluster.
 import { useCluster } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    cluster,      // SolanaCluster | null - Active cluster
-    clusters,     // SolanaCluster[] - Available clusters
-    setCluster,   // (id: SolanaClusterId) => Promise<void>
-    isMainnet,    // boolean - Convenience flags
-    isDevnet,     // boolean
-    rpcUrl,       // string - RPC endpoint URL
-    explorerUrl   // string - Solana Explorer base URL
-  } = useCluster();
+    const {
+        cluster, // SolanaCluster | null - Active cluster
+        clusters, // SolanaCluster[] - Available clusters
+        setCluster, // (id: SolanaClusterId) => Promise<void>
+        isMainnet, // boolean - Convenience flags
+        isDevnet, // boolean
+        rpcUrl, // string - RPC endpoint URL
+        explorerUrl, // string - Solana Explorer base URL
+    } = useCluster();
 }
 ```
 
@@ -162,12 +162,12 @@ Hook for accessing current wallet metadata.
 import { useWalletInfo } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    name,         // string | null - Wallet name
-    icon,         // string | undefined - Wallet icon URL
-    wallet,       // WalletInfo | null - Full wallet info
-    connecting    // boolean - Connection in progress
-  } = useWalletInfo();
+    const {
+        name, // string | null - Wallet name
+        icon, // string | undefined - Wallet icon URL
+        wallet, // WalletInfo | null - Full wallet info
+        connecting, // boolean - Connection in progress
+    } = useWalletInfo();
 }
 ```
 
@@ -183,10 +183,10 @@ Convenience functions when you need more control than the hooks provide.
 import { formatSOL, formatAddress } from '@connector-kit/connector';
 
 // Format SOL amounts (custom decimals)
-formatSOL(1500000000, { decimals: 4 })  // "1.5000 SOL"
+formatSOL(1500000000, { decimals: 4 }); // "1.5000 SOL"
 
 // Format addresses (custom length)
-formatAddress(address, { length: 6 })  // "5Gv8yU...8x3kF"
+formatAddress(address, { length: 6 }); // "5Gv8yU...8x3kF"
 ```
 
 ### Clipboard
@@ -214,7 +214,9 @@ const addrUrl = getAddressUrl(cluster, address);
 import { isMainnet, getNetworkDisplayName } from '@connector-kit/connector';
 
 // Check network type
-if (isMainnet(cluster)) { /* ... */ }
+if (isMainnet(cluster)) {
+    /* ... */
+}
 
 // Get display name
 const name = getNetworkDisplayName('mainnet-beta'); // "Mainnet"
@@ -232,11 +234,11 @@ const name = getNetworkDisplayName('mainnet-beta'); // "Mainnet"
 import { getDefaultConfig } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',           // Required
-  autoConnect: true,            // Auto-reconnect (default: true)
-  network: 'mainnet-beta',      // Initial network
-  enableMobile: true,           // Mobile Wallet Adapter (default: true)
-  debug: false                  // Debug logging
+    appName: 'My App', // Required
+    autoConnect: true, // Auto-reconnect (default: true)
+    network: 'mainnet-beta', // Initial network
+    enableMobile: true, // Mobile Wallet Adapter (default: true)
+    debug: false, // Debug logging
 });
 ```
 
@@ -244,8 +246,8 @@ const config = getDefaultConfig({
 
 ```typescript
 const config = getDefaultConfig({
-  appName: 'My App',
-  network: 'devnet'  // 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
+    appName: 'My App',
+    network: 'devnet', // 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
 });
 ```
 
@@ -255,12 +257,12 @@ const config = getDefaultConfig({
 import { getDefaultConfig, createSolanaMainnet } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',
-  clusters: [
-    createSolanaMainnet({
-      endpoint: 'https://my-custom-rpc.com'
-    })
-  ]
+    appName: 'My App',
+    clusters: [
+        createSolanaMainnet({
+            endpoint: 'https://my-custom-rpc.com',
+        }),
+    ],
 });
 ```
 
@@ -312,9 +314,7 @@ Use `ConnectorClient` for non-React frameworks.
 import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
 
 // Create client
-const client = new ConnectorClient(
-  getDefaultConfig({ appName: 'My App' })
-);
+const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
 
 // Get state
 const state = client.getSnapshot();
@@ -324,8 +324,8 @@ console.log('Wallets:', state.wallets);
 await client.select('Phantom');
 
 // Subscribe to changes
-const unsubscribe = client.subscribe((state) => {
-  console.log('State updated:', state);
+const unsubscribe = client.subscribe(state => {
+    console.log('State updated:', state);
 });
 
 // Disconnect
@@ -336,6 +336,7 @@ client.destroy();
 ```
 
 **Key Methods:**
+
 - `getSnapshot()` - Get current state (wallets, accounts, connection status)
 - `select(walletName)` - Connect to a wallet
 - `disconnect()` - Disconnect from wallet
@@ -382,47 +383,45 @@ function App() {
 ### Custom Storage (React Native, SSR)
 
 Storage uses nanostores with built-in enhancements that are **automatically applied**:
+
 - ✅ Validation (Solana address format checking)
 - ✅ Error handling (catches localStorage quota errors, private browsing)
 - ✅ SSR fallback (uses memory storage when localStorage unavailable)
 - ✅ Utility methods (reset, clear, isAvailable)
 
 **Most users don't need to configure storage.** Only customize for:
+
 - React Native (custom storage backend)
 - Additional validation rules
 - Custom error tracking
 
 ```typescript
-import { 
-  getDefaultConfig,
-  createEnhancedStorageWallet,
-  EnhancedStorageAdapter 
-} from '@connector-kit/connector';
+import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',
-  
-  // Optional: Add custom validation
-  storage: {
-    wallet: new EnhancedStorageAdapter(
-      createEnhancedStorageWallet({
-        validator: (walletName) => {
-          // Additional validation on top of defaults
-          return walletName !== null && walletName.length > 0;
-        },
-        onError: (error) => {
-          // Custom error tracking
-          Sentry.captureException(error);
-        }
-      })
-    ),
-    // ... account and cluster storage (uses defaults if not specified)
-  },
-  
-  // Optional: Global error handler
-  onError: (error, errorInfo) => {
-    console.error('Connector error:', error, errorInfo);
-  }
+    appName: 'My App',
+
+    // Optional: Add custom validation
+    storage: {
+        wallet: new EnhancedStorageAdapter(
+            createEnhancedStorageWallet({
+                validator: walletName => {
+                    // Additional validation on top of defaults
+                    return walletName !== null && walletName.length > 0;
+                },
+                onError: error => {
+                    // Custom error tracking
+                    Sentry.captureException(error);
+                },
+            }),
+        ),
+        // ... account and cluster storage (uses defaults if not specified)
+    },
+
+    // Optional: Global error handler
+    onError: (error, errorInfo) => {
+        console.error('Connector error:', error, errorInfo);
+    },
 });
 ```
 
@@ -545,7 +544,7 @@ import {
   formatNumber,
   formatTokenAmount,
   truncate,
-  
+
   // Lightweight formatters (no Intl, smaller bundle)
   formatAddressSimple,
   formatSOLSimple,
@@ -676,6 +675,7 @@ RPC_ENDPOINTS: Record<SolanaNetwork, string>
 #### When to Use Custom Storage
 
 Only needed for:
+
 - React Native (custom storage backend)
 - Additional validation rules beyond defaults
 - Custom error tracking/reporting
@@ -801,44 +801,44 @@ interface WalletError {
 
 ```typescript
 import type {
-  // Configuration
-  ConnectorConfig,
-  DefaultConfigOptions,
-  ExtendedConnectorConfig,
-  UnifiedConfigOptions,
-  UnifiedConfig,
-  MobileWalletAdapterConfig,
-  
-  // State & Info
-  ConnectorState,
-  ConnectorSnapshot,
-  WalletInfo,
-  AccountInfo,
-  
-  // Wallet Standard
-  Wallet,
-  WalletAccount,
-  WalletStandardWallet,
-  WalletStandardAccount,
-  
-  // Clusters
-  SolanaCluster,
-  SolanaClusterId,
-  
-  // Storage
-  StorageAdapter,
-  StorageOptions,
-  EnhancedStorageAccountOptions,
-  EnhancedStorageClusterOptions,
-  EnhancedStorageWalletOptions,
-  
-  // Hook Returns
-  UseClusterReturn,
-  UseAccountReturn,
-  UseWalletInfoReturn,
-  
-  // Errors
-  WalletError
+    // Configuration
+    ConnectorConfig,
+    DefaultConfigOptions,
+    ExtendedConnectorConfig,
+    UnifiedConfigOptions,
+    UnifiedConfig,
+    MobileWalletAdapterConfig,
+
+    // State & Info
+    ConnectorState,
+    ConnectorSnapshot,
+    WalletInfo,
+    AccountInfo,
+
+    // Wallet Standard
+    Wallet,
+    WalletAccount,
+    WalletStandardWallet,
+    WalletStandardAccount,
+
+    // Clusters
+    SolanaCluster,
+    SolanaClusterId,
+
+    // Storage
+    StorageAdapter,
+    StorageOptions,
+    EnhancedStorageAccountOptions,
+    EnhancedStorageClusterOptions,
+    EnhancedStorageWalletOptions,
+
+    // Hook Returns
+    UseClusterReturn,
+    UseAccountReturn,
+    UseWalletInfoReturn,
+
+    // Errors
+    WalletError,
 } from '@connector-kit/connector';
 ```
 
@@ -857,11 +857,7 @@ const client = new ConnectorClient(config);
 
 ```typescript
 // Import React exports only
-import { 
-  ConnectorProvider, 
-  useConnector, 
-  useAccount 
-} from '@connector-kit/connector/react';
+import { ConnectorProvider, useConnector, useAccount } from '@connector-kit/connector/react';
 ```
 
 #### Tree-Shaking

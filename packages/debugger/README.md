@@ -21,24 +21,24 @@ yarn add @connector-kit/debugger
 ## Usage
 
 ```tsx
-import { AppProvider } from '@connector-kit/connector/react'
-import { ConnectorDebugPanel } from '@connector-kit/debugger/react'
-import { getDefaultConfig } from '@connector-kit/connector/headless'
+import { AppProvider } from '@connector-kit/connector/react';
+import { ConnectorDebugPanel } from '@connector-kit/debugger/react';
+import { getDefaultConfig } from '@connector-kit/connector/headless';
 
 function App() {
-  const config = getDefaultConfig({
-    appName: 'My App',
-    appUrl: 'https://myapp.com'
-  })
+    const config = getDefaultConfig({
+        appName: 'My App',
+        appUrl: 'https://myapp.com',
+    });
 
-  return (
-    <AppProvider connectorConfig={config}>
-      {/* Your app */}
-      
-      {/* Debug panel - only visible in development */}
-      {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
-    </AppProvider>
-  )
+    return (
+        <AppProvider connectorConfig={config}>
+            {/* Your app */}
+
+            {/* Debug panel - only visible in development */}
+            {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
+        </AppProvider>
+    );
 }
 ```
 
@@ -46,23 +46,23 @@ function App() {
 
 ```tsx
 interface DebugPanelProps {
-  /** Position of the debug panel on screen (default: 'bottom-right') */
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-  
-  /** Whether to show the panel expanded by default (default: false) */
-  defaultOpen?: boolean
-  
-  /** Default tab to show (default: 'overview') */
-  defaultTab?: 'overview' | 'transactions' | 'events'
-  
-  /** Custom styles for the panel container */
-  style?: React.CSSProperties
-  
-  /** z-index for the panel (default: 9999) */
-  zIndex?: number
-  
-  /** Maximum number of events to keep in history (default: 50) */
-  maxEvents?: number
+    /** Position of the debug panel on screen (default: 'bottom-right') */
+    position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+    /** Whether to show the panel expanded by default (default: false) */
+    defaultOpen?: boolean;
+
+    /** Default tab to show (default: 'overview') */
+    defaultTab?: 'overview' | 'transactions' | 'events';
+
+    /** Custom styles for the panel container */
+    style?: React.CSSProperties;
+
+    /** z-index for the panel (default: 9999) */
+    zIndex?: number;
+
+    /** Maximum number of events to keep in history (default: 50) */
+    maxEvents?: number;
 }
 ```
 
@@ -74,4 +74,3 @@ interface DebugPanelProps {
 ## License
 
 MIT
-

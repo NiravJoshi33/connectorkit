@@ -9,6 +9,7 @@ Headless wallet connector built on Wallet Standard with powerful transaction sig
 ## ✨ What's New
 
 **Enhanced with production-ready features:**
+
 - 🔐 **Transaction Signer** - Clean abstraction for signing/sending transactions
 - 📊 **Event System** - Track connections, transactions, and errors for analytics
 - 🐛 **Debug Panel** - Floating dev-only state inspector
@@ -62,7 +63,7 @@ function WalletButton() {
       </div>
     );
   }
-  
+
   return (
     <div>
       <button onClick={copy}>{formatted}</button>
@@ -79,14 +80,14 @@ import { useTransactionSigner } from '@connector-kit/connector';
 
 function SendTransaction() {
   const { signer, ready, capabilities } = useTransactionSigner();
-  
+
   const handleSend = async () => {
     if (!signer) return;
-    
+
     const signature = await signer.signAndSendTransaction(transaction);
     console.log('Transaction sent:', signature);
   };
-  
+
   return (
     <button onClick={handleSend} disabled={!ready}>
       Send Transaction
@@ -104,12 +105,12 @@ function SendTransaction() {
 - [Core Features](#core-features)
 - [Core Hooks](#core-hooks)
 - [New Features](#new-features)
-  - [Transaction Signer](#transaction-signer)
-  - [Event System](#event-system)
-  - [Debug Panel](#debug-panel)
-  - [Connection Pooling](#connection-pooling)
-  - [Health Checks](#health-checks)
-  - [Wallet Adapter Compatibility](#wallet-adapter-compatibility)
+    - [Transaction Signer](#transaction-signer)
+    - [Event System](#event-system)
+    - [Debug Panel](#debug-panel)
+    - [Connection Pooling](#connection-pooling)
+    - [Health Checks](#health-checks)
+    - [Wallet Adapter Compatibility](#wallet-adapter-compatibility)
 - [Configuration](#configuration)
 - [Advanced Usage](#advanced-usage)
 - [API Reference](#complete-api-reference)
@@ -141,18 +142,18 @@ Main hook for wallet connection and state.
 import { useConnector } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    // State
-    wallets,         // WalletInfo[] - All available wallets
-    selectedWallet,  // Wallet | null - Currently connected wallet
-    accounts,        // AccountInfo[] - Connected accounts
-    connected,       // boolean - Connection status
-    connecting,      // boolean - Connecting in progress
-    
-    // Actions
-    select,          // (walletName: string) => Promise<void>
-    disconnect,      // () => Promise<void>
-  } = useConnector();
+    const {
+        // State
+        wallets, // WalletInfo[] - All available wallets
+        selectedWallet, // Wallet | null - Currently connected wallet
+        accounts, // AccountInfo[] - Connected accounts
+        connected, // boolean - Connection status
+        connecting, // boolean - Connecting in progress
+
+        // Actions
+        select, // (walletName: string) => Promise<void>
+        disconnect, // () => Promise<void>
+    } = useConnector();
 }
 ```
 
@@ -164,15 +165,15 @@ Hook for working with the connected account.
 import { useAccount } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    address,      // string | null - Full wallet address
-    formatted,    // string - Shortened address (e.g., "5Gv8...x3kF")
-    copy,         // () => Promise<boolean> - Copy address to clipboard
-    copied,       // boolean - True for 2s after copying
-    connected,    // boolean - Connection status
-    accounts,     // AccountInfo[] - All accounts
-    selectAccount // (address: string) => Promise<void>
-  } = useAccount();
+    const {
+        address, // string | null - Full wallet address
+        formatted, // string - Shortened address (e.g., "5Gv8...x3kF")
+        copy, // () => Promise<boolean> - Copy address to clipboard
+        copied, // boolean - True for 2s after copying
+        connected, // boolean - Connection status
+        accounts, // AccountInfo[] - All accounts
+        selectAccount, // (address: string) => Promise<void>
+    } = useAccount();
 }
 ```
 
@@ -184,15 +185,15 @@ Hook for managing Solana network/cluster.
 import { useCluster } from '@connector-kit/connector';
 
 function Component() {
-  const {
-    cluster,      // SolanaCluster | null - Active cluster
-    clusters,     // SolanaCluster[] - Available clusters
-    setCluster,   // (id: SolanaClusterId) => Promise<void>
-    isMainnet,    // boolean - Convenience flags
-    isDevnet,     // boolean
-    rpcUrl,       // string - RPC endpoint URL
-    explorerUrl   // string - Solana Explorer base URL
-  } = useCluster();
+    const {
+        cluster, // SolanaCluster | null - Active cluster
+        clusters, // SolanaCluster[] - Available clusters
+        setCluster, // (id: SolanaClusterId) => Promise<void>
+        isMainnet, // boolean - Convenience flags
+        isDevnet, // boolean
+        rpcUrl, // string - RPC endpoint URL
+        explorerUrl, // string - Solana Explorer base URL
+    } = useCluster();
 }
 ```
 
@@ -209,37 +210,37 @@ import { useTransactionSigner } from '@connector-kit/connector';
 
 function SendTx() {
   const { signer, ready, capabilities } = useTransactionSigner();
-  
+
   // Check capabilities
   console.log('Can sign:', capabilities.canSign);
   console.log('Can send:', capabilities.canSend);
   console.log('Can sign messages:', capabilities.canSignMessage);
   console.log('Batch support:', capabilities.supportsBatchSigning);
-  
+
   const handleSend = async () => {
     if (!signer) return;
-    
+
     try {
       // Sign and send a transaction
       const signature = await signer.signAndSendTransaction(transaction);
       console.log('Success:', signature);
-      
+
       // Or just sign without sending
       const signed = await signer.signTransaction(transaction);
-      
+
       // Or sign multiple transactions
       const signedBatch = await signer.signAllTransactions([tx1, tx2, tx3]);
-      
+
       // Or sign and send multiple
       const signatures = await signer.signAndSendTransactions([tx1, tx2]);
-      
+
     } catch (error) {
       if (error instanceof TransactionSignerError) {
         console.error('Signing error:', error.code, error.message);
       }
     }
   };
-  
+
   return (
     <button onClick={handleSend} disabled={!ready}>
       Send Transaction
@@ -249,28 +250,29 @@ function SendTx() {
 ```
 
 **Error Handling**:
+
 ```typescript
 import { isTransactionSignerError, TransactionSignerError } from '@connector-kit/connector';
 
 try {
-  await signer.signAndSendTransaction(tx);
+    await signer.signAndSendTransaction(tx);
 } catch (error) {
-  if (isTransactionSignerError(error)) {
-    switch (error.code) {
-      case 'WALLET_NOT_CONNECTED':
-        // Show connect prompt
-        break;
-      case 'FEATURE_NOT_SUPPORTED':
-        // Show unsupported feature message
-        break;
-      case 'SIGNING_FAILED':
-        // User rejected or signing failed
-        break;
-      case 'SEND_FAILED':
-        // Transaction broadcast failed
-        break;
+    if (isTransactionSignerError(error)) {
+        switch (error.code) {
+            case 'WALLET_NOT_CONNECTED':
+                // Show connect prompt
+                break;
+            case 'FEATURE_NOT_SUPPORTED':
+                // Show unsupported feature message
+                break;
+            case 'SIGNING_FAILED':
+                // User rejected or signing failed
+                break;
+            case 'SEND_FAILED':
+                // Transaction broadcast failed
+                break;
+        }
     }
-  }
 }
 ```
 
@@ -282,49 +284,50 @@ Track all connector lifecycle events for analytics and monitoring.
 import { useConnectorClient } from '@connector-kit/connector';
 
 function AnalyticsTracker() {
-  const client = useConnectorClient();
-  
-  useEffect(() => {
-    if (!client) return;
-    
-    // Subscribe to events
-    const unsubscribe = client.on((event) => {
-      switch (event.type) {
-        case 'wallet:connected':
-          analytics.track('Wallet Connected', {
-            wallet: event.wallet,
-            account: event.account,
-            timestamp: event.timestamp
-          });
-          break;
-          
-        case 'wallet:disconnected':
-          analytics.track('Wallet Disconnected');
-          break;
-          
-        case 'cluster:changed':
-          analytics.track('Network Changed', {
-            from: event.previousCluster,
-            to: event.cluster
-          });
-          break;
-          
-        case 'error':
-          errorTracker.captureException(event.error, {
-            context: event.context
-          });
-          break;
-      }
-    });
-    
-    return unsubscribe;
-  }, [client]);
-  
-  return null;
+    const client = useConnectorClient();
+
+    useEffect(() => {
+        if (!client) return;
+
+        // Subscribe to events
+        const unsubscribe = client.on(event => {
+            switch (event.type) {
+                case 'wallet:connected':
+                    analytics.track('Wallet Connected', {
+                        wallet: event.wallet,
+                        account: event.account,
+                        timestamp: event.timestamp,
+                    });
+                    break;
+
+                case 'wallet:disconnected':
+                    analytics.track('Wallet Disconnected');
+                    break;
+
+                case 'cluster:changed':
+                    analytics.track('Network Changed', {
+                        from: event.previousCluster,
+                        to: event.cluster,
+                    });
+                    break;
+
+                case 'error':
+                    errorTracker.captureException(event.error, {
+                        context: event.context,
+                    });
+                    break;
+            }
+        });
+
+        return unsubscribe;
+    }, [client]);
+
+    return null;
 }
 ```
 
 **Available Events**:
+
 - `wallet:connected` - Wallet successfully connected
 - `wallet:disconnected` - Wallet disconnected
 - `wallet:changed` - Selected wallet changed
@@ -354,6 +357,7 @@ function App() {
 ```
 
 **Features**:
+
 - Shows connection status (connected/disconnected/connecting)
 - Displays current account and wallet
 - Shows active cluster and RPC URL
@@ -363,8 +367,9 @@ function App() {
 - Automatically excluded in production builds
 
 **Custom positioning**:
+
 ```typescript
-<ConnectorDebugPanel 
+<ConnectorDebugPanel
   position="top-left"    // 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   defaultOpen={true}
   zIndex={10000}
@@ -381,12 +386,12 @@ import { Connection } from '@solana/web3.js';
 
 // Create custom pool
 const pool = createConnectionPool({
-  maxSize: 10,
-  createConnection: (cluster) => {
-    return new Connection(cluster.endpoint, {
-      commitment: 'confirmed'
-    });
-  }
+    maxSize: 10,
+    createConnection: cluster => {
+        return new Connection(cluster.endpoint, {
+            commitment: 'confirmed',
+        });
+    },
 });
 
 // Get or create connection for a cluster
@@ -399,10 +404,11 @@ pool.clear('solana:mainnet');
 // Get pool statistics
 const stats = pool.getStats();
 console.log(`Pool: ${stats.size}/${stats.maxSize}`);
-console.log(`Hit rate: ${stats.hits / (stats.hits + stats.misses) * 100}%`);
+console.log(`Hit rate: ${(stats.hits / (stats.hits + stats.misses)) * 100}%`);
 ```
 
 **Global pool** (simpler):
+
 ```typescript
 import { getConnectionPool } from '@connector-kit/connector/headless';
 
@@ -419,11 +425,11 @@ import { useConnectorClient } from '@connector-kit/connector';
 
 function HealthMonitor() {
   const client = useConnectorClient();
-  
+
   if (!client) return null;
-  
+
   const health = client.getHealth();
-  
+
   return (
     <div>
       <h3>Connector Health</h3>
@@ -431,7 +437,7 @@ function HealthMonitor() {
       <div>Wallet Standard: {health.walletStandardAvailable ? '✓' : '✗'}</div>
       <div>Storage: {health.storageAvailable ? '✓' : '✗'}</div>
       <div>Wallets Detected: {health.walletsDetected}</div>
-      
+
       {health.errors.length > 0 && (
         <div className="errors">
           {health.errors.map(err => <div key={err}>{err}</div>)}
@@ -453,7 +459,7 @@ import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
 function JupiterIntegration() {
   const { signer } = useTransactionSigner();
   const { disconnect } = useConnector();
-  
+
   // Create wallet-adapter compatible interface
   const walletAdapter = createWalletAdapterCompat(signer, {
     disconnect: async () => {
@@ -463,13 +469,14 @@ function JupiterIntegration() {
       console.error(`Wallet adapter error in ${operation}:`, error);
     }
   });
-  
+
   // Use with Jupiter, Serum, or any wallet-adapter library
   return <JupiterTerminal wallet={walletAdapter} />;
 }
 ```
 
 **Compatible with**:
+
 - Jupiter Aggregator
 - Serum DEX
 - Raydium
@@ -486,17 +493,17 @@ function JupiterIntegration() {
 import { getDefaultConfig } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',           // Required
-  autoConnect: true,            // Auto-reconnect (default: true)
-  network: 'mainnet-beta',      // Initial network
-  enableMobile: true,           // Mobile Wallet Adapter (default: true)
-  debug: false,                 // Debug logging
-  
-  // NEW: Custom error handler
-  onError: (error, errorInfo) => {
-    console.error('Connector error:', error);
-    errorTracker.captureException(error, errorInfo);
-  }
+    appName: 'My App', // Required
+    autoConnect: true, // Auto-reconnect (default: true)
+    network: 'mainnet-beta', // Initial network
+    enableMobile: true, // Mobile Wallet Adapter (default: true)
+    debug: false, // Debug logging
+
+    // NEW: Custom error handler
+    onError: (error, errorInfo) => {
+        console.error('Connector error:', error);
+        errorTracker.captureException(error, errorInfo);
+    },
 });
 ```
 
@@ -504,8 +511,8 @@ const config = getDefaultConfig({
 
 ```typescript
 const config = getDefaultConfig({
-  appName: 'My App',
-  network: 'devnet'  // 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
+    appName: 'My App',
+    network: 'devnet', // 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
 });
 ```
 
@@ -515,15 +522,15 @@ const config = getDefaultConfig({
 import { getDefaultConfig, createSolanaMainnet } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',
-  clusters: [
-    createSolanaMainnet({
-      endpoint: 'https://my-custom-rpc.com'
-    })
-  ],
-  customClusters: [
-    // Add additional custom clusters
-  ]
+    appName: 'My App',
+    clusters: [
+        createSolanaMainnet({
+            endpoint: 'https://my-custom-rpc.com',
+        }),
+    ],
+    customClusters: [
+        // Add additional custom clusters
+    ],
 });
 ```
 
@@ -556,9 +563,7 @@ Use `ConnectorClient` for non-React frameworks.
 import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
 
 // Create client
-const client = new ConnectorClient(
-  getDefaultConfig({ appName: 'My App' })
-);
+const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
 
 // Get state
 const state = client.getSnapshot();
@@ -568,13 +573,13 @@ console.log('Wallets:', state.wallets);
 await client.select('Phantom');
 
 // Subscribe to changes
-const unsubscribe = client.subscribe((state) => {
-  console.log('State updated:', state);
+const unsubscribe = client.subscribe(state => {
+    console.log('State updated:', state);
 });
 
 // Subscribe to events (NEW!)
-const unsubEvents = client.on((event) => {
-  console.log('Event:', event.type, event);
+const unsubEvents = client.on(event => {
+    console.log('Event:', event.type, event);
 });
 
 // Check health (NEW!)
@@ -626,34 +631,31 @@ function App() {
 **Most users don't need to configure storage** - it works automatically with validation, error handling, and SSR fallback.
 
 Only customize for:
+
 - React Native (custom storage backend)
 - Additional validation rules
 - Custom error tracking
 
 ```typescript
-import { 
-  getDefaultConfig,
-  createEnhancedStorageWallet,
-  EnhancedStorageAdapter 
-} from '@connector-kit/connector';
+import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@connector-kit/connector';
 
 const config = getDefaultConfig({
-  appName: 'My App',
-  
-  storage: {
-    wallet: new EnhancedStorageAdapter(
-      createEnhancedStorageWallet({
-        validator: (walletName) => {
-          // Custom validation
-          return walletName !== null && walletName.length > 0;
-        },
-        onError: (error) => {
-          Sentry.captureException(error);
-        }
-      })
-    ),
-    // account and cluster use defaults if not specified
-  }
+    appName: 'My App',
+
+    storage: {
+        wallet: new EnhancedStorageAdapter(
+            createEnhancedStorageWallet({
+                validator: walletName => {
+                    // Custom validation
+                    return walletName !== null && walletName.length > 0;
+                },
+                onError: error => {
+                    Sentry.captureException(error);
+                },
+            }),
+        ),
+        // account and cluster use defaults if not specified
+    },
 });
 ```
 
@@ -724,10 +726,10 @@ React hook for transaction operations.
 
 ```typescript
 interface UseTransactionSignerReturn {
-  signer: TransactionSigner | null;       // Signer instance
-  ready: boolean;                         // Whether signer is ready
-  address: string | null;                 // Current address
-  capabilities: TransactionSignerCapabilities;  // What signer can do
+    signer: TransactionSigner | null; // Signer instance
+    ready: boolean; // Whether signer is ready
+    address: string | null; // Current address
+    capabilities: TransactionSignerCapabilities; // What signer can do
 }
 ```
 
@@ -739,9 +741,9 @@ Create a transaction signer (headless).
 import { createTransactionSigner } from '@connector-kit/connector/headless';
 
 const signer = createTransactionSigner({
-  wallet: connectedWallet,
-  account: selectedAccount,
-  cluster: currentCluster  // Optional
+    wallet: connectedWallet,
+    account: selectedAccount,
+    cluster: currentCluster, // Optional
 });
 ```
 
@@ -749,15 +751,15 @@ const signer = createTransactionSigner({
 
 ```typescript
 interface TransactionSigner {
-  readonly address: string;
-  
-  signTransaction(tx: any): Promise<any>;
-  signAllTransactions(txs: any[]): Promise<any[]>;
-  signAndSendTransaction(tx: any, options?: SendOptions): Promise<string>;
-  signAndSendTransactions(txs: any[], options?: SendOptions): Promise<string[]>;
-  signMessage?(message: Uint8Array): Promise<Uint8Array>;
-  
-  getCapabilities(): TransactionSignerCapabilities;
+    readonly address: string;
+
+    signTransaction(tx: any): Promise<any>;
+    signAllTransactions(txs: any[]): Promise<any[]>;
+    signAndSendTransaction(tx: any, options?: SendOptions): Promise<string>;
+    signAndSendTransactions(txs: any[], options?: SendOptions): Promise<string[]>;
+    signMessage?(message: Uint8Array): Promise<Uint8Array>;
+
+    getCapabilities(): TransactionSignerCapabilities;
 }
 ```
 
@@ -767,21 +769,21 @@ interface TransactionSigner {
 
 ```typescript
 type ConnectorEvent =
-  | { type: 'wallet:connected'; wallet: string; account: string; timestamp: string }
-  | { type: 'wallet:disconnected'; timestamp: string }
-  | { type: 'cluster:changed'; cluster: string; previousCluster: string | null; timestamp: string }
-  | { type: 'wallets:detected'; count: number; timestamp: string }
-  | { type: 'connecting'; wallet: string; timestamp: string }
-  | { type: 'connection:failed'; wallet: string; error: string; timestamp: string }
-  | { type: 'error'; error: Error; context: string; timestamp: string }
+    | { type: 'wallet:connected'; wallet: string; account: string; timestamp: string }
+    | { type: 'wallet:disconnected'; timestamp: string }
+    | { type: 'cluster:changed'; cluster: string; previousCluster: string | null; timestamp: string }
+    | { type: 'wallets:detected'; count: number; timestamp: string }
+    | { type: 'connecting'; wallet: string; timestamp: string }
+    | { type: 'connection:failed'; wallet: string; error: string; timestamp: string }
+    | { type: 'error'; error: Error; context: string; timestamp: string };
 ```
 
 #### Methods
 
 ```typescript
 // Subscribe to events
-const unsubscribe = client.on((event) => {
-  console.log('Event:', event.type, event);
+const unsubscribe = client.on(event => {
+    console.log('Event:', event.type, event);
 });
 
 // Unsubscribe
@@ -795,18 +797,18 @@ client.offAll();
 
 ```typescript
 interface ConnectorHealth {
-  initialized: boolean;
-  walletStandardAvailable: boolean;
-  storageAvailable: boolean;
-  walletsDetected: number;
-  errors: string[];
-  connectionState: {
-    connected: boolean;
-    connecting: boolean;
-    hasSelectedWallet: boolean;
-    hasSelectedAccount: boolean;
-  };
-  timestamp: string;
+    initialized: boolean;
+    walletStandardAvailable: boolean;
+    storageAvailable: boolean;
+    walletsDetected: number;
+    errors: string[];
+    connectionState: {
+        connected: boolean;
+        connecting: boolean;
+        hasSelectedWallet: boolean;
+        hasSelectedAccount: boolean;
+    };
+    timestamp: string;
 }
 
 // Get health status
@@ -817,12 +819,12 @@ const health = client.getHealth();
 
 ```typescript
 class ConnectionPool {
-  get(cluster: SolanaCluster): ConnectionLike;
-  has(clusterId: string): boolean;
-  clear(clusterId: string): void;
-  clearAll(): void;
-  getStats(): ConnectionPoolStats;
-  resetStats(): void;
+    get(cluster: SolanaCluster): ConnectionLike;
+    has(clusterId: string): boolean;
+    clear(clusterId: string): void;
+    clearAll(): void;
+    getStats(): ConnectionPoolStats;
+    resetStats(): void;
 }
 
 // Create pool
@@ -859,11 +861,11 @@ isWalletAdapterCompatible(obj: any): obj is WalletAdapterCompatible
 ### Polyfill API (NEW!)
 
 ```typescript
-import { 
-  installPolyfills, 
-  isPolyfillInstalled, 
-  isCryptoAvailable,
-  getPolyfillStatus 
+import {
+    installPolyfills,
+    isPolyfillInstalled,
+    isCryptoAvailable,
+    getPolyfillStatus,
 } from '@connector-kit/connector/headless';
 
 // Install browser polyfills (automatic in React provider)
@@ -883,10 +885,10 @@ const status = getPolyfillStatus();
 import { formatSOL, formatAddress } from '@connector-kit/connector';
 
 // Format SOL amounts
-formatSOL(1500000000, { decimals: 4 })  // "1.5000 SOL"
+formatSOL(1500000000, { decimals: 4 }); // "1.5000 SOL"
 
 // Format addresses
-formatAddress(address, { length: 6 })  // "5Gv8yU...8x3kF"
+formatAddress(address, { length: 6 }); // "5Gv8yU...8x3kF"
 
 // Lightweight versions (smaller bundle, no Intl)
 import { formatSOLSimple, formatAddressSimple } from '@connector-kit/connector';
@@ -905,12 +907,12 @@ await copyToClipboard(text);
 
 ```typescript
 import {
-  getClusterRpcUrl,
-  getClusterExplorerUrl,
-  getTransactionUrl,
-  getAddressUrl,
-  isMainnetCluster,
-  isDevnetCluster
+    getClusterRpcUrl,
+    getClusterExplorerUrl,
+    getTransactionUrl,
+    getAddressUrl,
+    isMainnetCluster,
+    isDevnetCluster,
 } from '@connector-kit/connector';
 
 const rpcUrl = getClusterRpcUrl(cluster);
@@ -923,58 +925,58 @@ const addrUrl = getAddressUrl(cluster, address);
 
 ```typescript
 import type {
-  // Configuration
-  ConnectorConfig,
-  DefaultConfigOptions,
-  ExtendedConnectorConfig,
-  UnifiedConfig,
-  MobileWalletAdapterConfig,
-  
-  // State & Info
-  ConnectorState,
-  ConnectorSnapshot,
-  WalletInfo,
-  AccountInfo,
-  ConnectorHealth,           // NEW!
-  
-  // Events
-  ConnectorEvent,            // NEW!
-  ConnectorEventListener,    // NEW!
-  
-  // Transaction Signing
-  TransactionSigner,         // NEW!
-  TransactionSignerConfig,   // NEW!
-  TransactionSignerCapabilities,  // NEW!
-  SignedTransaction,         // NEW!
-  
-  // Connection Pooling
-  ConnectionLike,            // NEW!
-  ConnectionPoolOptions,     // NEW!
-  ConnectionPoolStats,       // NEW!
-  
-  // Wallet Adapter Compat
-  WalletAdapterCompatible,   // NEW!
-  WalletAdapterCompatOptions, // NEW!
-  
-  // Wallet Standard
-  Wallet,
-  WalletAccount,
-  
-  // Clusters
-  SolanaCluster,
-  SolanaClusterId,
-  
-  // Storage
-  StorageAdapter,
-  
-  // Hook Returns
-  UseClusterReturn,
-  UseAccountReturn,
-  UseWalletInfoReturn,
-  UseTransactionSignerReturn,  // NEW!
-  
-  // Errors
-  WalletError
+    // Configuration
+    ConnectorConfig,
+    DefaultConfigOptions,
+    ExtendedConnectorConfig,
+    UnifiedConfig,
+    MobileWalletAdapterConfig,
+
+    // State & Info
+    ConnectorState,
+    ConnectorSnapshot,
+    WalletInfo,
+    AccountInfo,
+    ConnectorHealth, // NEW!
+
+    // Events
+    ConnectorEvent, // NEW!
+    ConnectorEventListener, // NEW!
+
+    // Transaction Signing
+    TransactionSigner, // NEW!
+    TransactionSignerConfig, // NEW!
+    TransactionSignerCapabilities, // NEW!
+    SignedTransaction, // NEW!
+
+    // Connection Pooling
+    ConnectionLike, // NEW!
+    ConnectionPoolOptions, // NEW!
+    ConnectionPoolStats, // NEW!
+
+    // Wallet Adapter Compat
+    WalletAdapterCompatible, // NEW!
+    WalletAdapterCompatOptions, // NEW!
+
+    // Wallet Standard
+    Wallet,
+    WalletAccount,
+
+    // Clusters
+    SolanaCluster,
+    SolanaClusterId,
+
+    // Storage
+    StorageAdapter,
+
+    // Hook Returns
+    UseClusterReturn,
+    UseAccountReturn,
+    UseWalletInfoReturn,
+    UseTransactionSignerReturn, // NEW!
+
+    // Errors
+    WalletError,
 } from '@connector-kit/connector';
 ```
 
@@ -984,15 +986,15 @@ import type {
 
 ### Bundle Size
 
-| Component | Size (gzipped) | Tree-Shakeable |
-|-----------|----------------|----------------|
-| **Base Connector** | ~45KB | ✅ |
-| + Polyfills | +2KB | ❌ (auto-included) |
-| + Transaction Signer | +3KB | ✅ |
-| + Connection Pool | +1.5KB | ✅ |
-| + Debug Panel | +2KB | ✅ (dev-only) |
-| + Event System | +0.5KB | ✅ |
-| + Compat Layer | +2KB | ✅ |
+| Component            | Size (gzipped) | Tree-Shakeable     |
+| -------------------- | -------------- | ------------------ |
+| **Base Connector**   | ~45KB          | ✅                 |
+| + Polyfills          | +2KB           | ❌ (auto-included) |
+| + Transaction Signer | +3KB           | ✅                 |
+| + Connection Pool    | +1.5KB         | ✅                 |
+| + Debug Panel        | +2KB           | ✅ (dev-only)      |
+| + Event System       | +0.5KB         | ✅                 |
+| + Compat Layer       | +2KB           | ✅                 |
 
 **Total**: ~48-53KB for typical production usage
 
@@ -1008,6 +1010,7 @@ import type {
 ## Browser Compatibility
 
 Enhanced support for:
+
 - ✅ Chrome/Edge 90+
 - ✅ Firefox 88+
 - ✅ Safari 14+
@@ -1048,6 +1051,7 @@ const walletAdapter = createWalletAdapterCompat(signer, { disconnect });
 ## Examples
 
 Check out the [examples directory](../../examples/react) for:
+
 - Complete wallet connection UI with shadcn/ui
 - Transaction signing demos
 - Network switching
@@ -1099,4 +1103,3 @@ MIT
 ---
 
 **Built with ❤️ and attention to detail**
-

@@ -24,8 +24,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
-          registry-url: "https://registry.npmjs.org"
+          node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -67,12 +67,12 @@ jobs:
         if: failure()
         uses: ./.github/actions/show-failure-logs
         with:
-          test-type: "Package build and test"
+          test-type: 'Package build and test'
 
   coverage-report:
     name: Generate Coverage Report
     needs: [build-and-test]
-    if: always()  # Run even if tests fail
+    if: always() # Run even if tests fail
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,162 +1,122 @@
 /**
  * @connector-kit/connector/headless
- * 
+ *
  * Framework-agnostic core - works with Vue, Angular, Vanilla JS
  * Zero React dependencies for maximum compatibility
  */
 
-
 // ============================================================================
 // Core Client & Registry
 // ============================================================================
-export { ConnectorClient } from './lib/connector-client'
-export { getWalletsRegistry } from './lib/wallet-standard-shim'
+export { ConnectorClient } from './lib/connector-client';
+export { getWalletsRegistry } from './lib/wallet-standard-shim';
 
 // ============================================================================
 // Configuration
 // ============================================================================
-export { getDefaultConfig, getDefaultMobileConfig, createConfig, isUnifiedConfig } from './config'
-export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config'
+export { getDefaultConfig, getDefaultMobileConfig, createConfig, isUnifiedConfig } from './config';
+export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config';
 
 // ============================================================================
 // Essential Types
 // ============================================================================
-export type {
-  Wallet,
-  WalletAccount,
-  WalletInfo
-} from './types/wallets'
+export type { Wallet, WalletAccount, WalletInfo } from './types/wallets';
+
+export type { AccountInfo } from './types/accounts';
 
 export type {
-  AccountInfo
-} from './types/accounts'
+    ConnectorConfig,
+    ConnectorState,
+    ConnectorHealth,
+    ConnectorDebugMetrics,
+    ConnectorDebugState,
+    Listener,
+} from './types/connector';
 
 export type {
-  ConnectorConfig,
-  ConnectorState,
-  ConnectorHealth,
-  ConnectorDebugMetrics,
-  ConnectorDebugState,
-  Listener
-} from './types/connector'
+    TransactionSignerConfig,
+    SignedTransaction,
+    TransactionSignerCapabilities,
+    TransactionActivity,
+} from './types/transactions';
+
+export type { ConnectorEvent, ConnectorEventListener } from './types/events';
 
 export type {
-  TransactionSignerConfig,
-  SignedTransaction,
-  TransactionSignerCapabilities,
-  TransactionActivity
-} from './types/transactions'
+    StorageAdapter,
+    StorageOptions,
+    EnhancedStorageAccountOptions,
+    EnhancedStorageClusterOptions,
+    EnhancedStorageWalletOptions,
+} from './types/storage';
 
-export type {
-  ConnectorEvent,
-  ConnectorEventListener
-} from './types/events'
+export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet-standard-shim';
 
-export type {
-  StorageAdapter,
-  StorageOptions,
-  EnhancedStorageAccountOptions,
-  EnhancedStorageClusterOptions,
-  EnhancedStorageWalletOptions
-} from './types/storage'
-
-export type {
-  WalletStandardWallet,
-  WalletStandardAccount
-} from './lib/wallet-standard-shim'
-
-export type { MobileWalletAdapterConfig } from './ui/connector-provider'
+export type { MobileWalletAdapterConfig } from './ui/connector-provider';
 
 // ============================================================================
 // Transaction Signing
 // ============================================================================
-export {
-  createTransactionSigner,
-  TransactionSignerError,
-  isTransactionSignerError
-} from './lib/transaction-signer'
+export { createTransactionSigner, TransactionSignerError, isTransactionSignerError } from './lib/transaction-signer';
 
-export type {
-  TransactionSigner
-} from './lib/transaction-signer'
+export type { TransactionSigner } from './lib/transaction-signer';
 
 // ============================================================================
 // RPC Connection Pooling
 // ============================================================================
-export {
-  ConnectionPool,
-  getConnectionPool,
-  createConnectionPool
-} from './lib/connection-pool'
+export { ConnectionPool, getConnectionPool, createConnectionPool } from './lib/connection-pool';
 
-export type {
-  ConnectionLike,
-  ConnectionPoolOptions,
-  ConnectionPoolStats
-} from './lib/connection-pool'
+export type { ConnectionLike, ConnectionPoolOptions, ConnectionPoolStats } from './lib/connection-pool';
 
 // ============================================================================
 // Storage System
 // ============================================================================
 export {
-  EnhancedStorage,
-  EnhancedStorageAdapter,
-  createEnhancedStorageAccount,
-  createEnhancedStorageCluster,
-  createEnhancedStorageWallet
-} from './lib/enhanced-storage'
+    EnhancedStorage,
+    EnhancedStorageAdapter,
+    createEnhancedStorageAccount,
+    createEnhancedStorageCluster,
+    createEnhancedStorageWallet,
+} from './lib/enhanced-storage';
 
 // ============================================================================
 // Error Handling
 // ============================================================================
-export { WalletErrorType } from './ui/error-boundary'
-export type { WalletError } from './ui/error-boundary'
+export { WalletErrorType } from './ui/error-boundary';
+export type { WalletError } from './ui/error-boundary';
 
 // ============================================================================
 // Wallet-UI Integration
 // ============================================================================
-export type {
-  SolanaCluster,
-  SolanaClusterId,
-} from '@wallet-ui/core'
+export type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 
-export {
-  createSolanaMainnet,
-  createSolanaDevnet,
-  createSolanaTestnet,
-  createSolanaLocalnet,
-} from '@wallet-ui/core'
+export { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
 
 // ============================================================================
 // Browser Compatibility
 // ============================================================================
-export { 
-  installPolyfills, 
-  isPolyfillInstalled, 
-  isCryptoAvailable, 
-  getPolyfillStatus 
-} from './lib/polyfills'
+export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } from './lib/polyfills';
 
 // ============================================================================
 // Utility Functions
 // ============================================================================
-export * from './utils/clipboard'
-export * from './utils/formatting'
-export * from './utils/formatting-light'
-export * from './utils/cluster'
-export * from './utils/network'
+export * from './utils/clipboard';
+export * from './utils/formatting';
+export * from './utils/formatting-light';
+export * from './utils/cluster';
+export * from './utils/network';
 
 // ============================================================================
 // Explorer URLs & Transaction Utilities
 // ============================================================================
 export {
-  getSolanaExplorerUrl,
-  getSolscanUrl,
-  getXrayUrl,
-  getSolanaFmUrl,
-  getAllExplorerUrls,
-  formatSignature,
-  copySignature
-} from './lib/explorer-urls'
+    getSolanaExplorerUrl,
+    getSolscanUrl,
+    getXrayUrl,
+    getSolanaFmUrl,
+    getAllExplorerUrls,
+    formatSignature,
+    copySignature,
+} from './lib/explorer-urls';
 
-export type { ExplorerType, ExplorerOptions } from './lib/explorer-urls'
+export type { ExplorerType, ExplorerOptions } from './lib/explorer-urls';
