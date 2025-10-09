@@ -3,8 +3,7 @@
  * Adapted from Solana Explorer for transaction debugging
  */
 
-import { TransactionError } from '@solana/web3.js';
-import { getTransactionInstructionError } from './transaction-errors';
+import { getTransactionInstructionError, type TransactionErrorType } from './transaction-errors';
 import { getProgramName } from './program-names';
 
 export interface LogMessage {
@@ -23,10 +22,11 @@ export interface InstructionLogs {
 
 /**
  * Parse raw transaction logs into structured instruction logs
+ * Works with both legacy web3.js and Solana Kit transaction structures
  */
 export function parseProgramLogs(
     logs: string[],
-    error: TransactionError | null,
+    error: TransactionErrorType,
     cluster: string = 'mainnet'
 ): InstructionLogs[] {
     let depth = 0;

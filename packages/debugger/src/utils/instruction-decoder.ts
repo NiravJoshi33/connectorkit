@@ -3,7 +3,6 @@
  * Decodes common instruction types for display
  */
 
-import { ParsedInstruction, PartiallyDecodedInstruction } from '@solana/web3.js';
 import { getShortProgramName } from './program-names';
 
 export interface DecodedInstruction {
@@ -15,14 +14,31 @@ export interface DecodedInstruction {
 }
 
 /**
+ * Instruction type from Solana Kit getTransaction with jsonParsed encoding
+ */
+interface SolanaKitInstruction {
+    programId?: string;
+    program?: string;
+    parsed?: {
+        type?: string;
+        info?: any;
+    };
+    data?: string | number[];
+    accounts?: string[];
+}
+
+/**
  * Decode instruction to readable format
+ * Works with Solana Kit transaction structure (jsonParsed encoding)
  */
 export function decodeInstruction(
-    instruction: ParsedInstruction | PartiallyDecodedInstruction,
+    instruction: SolanaKitInstruction | any,
     index: number
 ): DecodedInstruction {
-    const programId = instruction.programId.toBase58();
-    const programName = getShortProgramName(programId);
+    // Extract programId - could be 'programId' or 'program' field
+    const programId = instruction.programId || instruction.program || 'unknown';
+    const programIdStr = typeof programId === 'string' ? programId : String(programId);
+    const programName = getShortProgramName(programIdStr);
 
     // Handle parsed instructions (Token, System, etc.)
     if ('parsed' in instruction && typeof instruction.parsed === 'object') {
@@ -31,26 +47,31 @@ export function decodeInstruction(
         
         return {
             index: index + 1,
-            programId,
+            programId: programIdStr,
             programName,
             instructionName: formatInstructionType(instructionType),
         };
     }
 
-    // Handle partially decoded instructions
+    // Handle partially decoded instructions with data
     if ('data' in instruction) {
+        const data = instruction.data;
+        const dataStr = typeof data === 'string' ? data : 
+                       Array.isArray(data) ? data.join(',') : 
+                       undefined;
+        
         return {
             index: index + 1,
-            programId,
+            programId: programIdStr,
             programName,
             instructionName: 'Unknown Instruction',
-            data: typeof instruction.data === 'string' ? instruction.data : undefined,
+            data: dataStr,
         };
     }
 
     return {
         index: index + 1,
-        programId,
+        programId: programIdStr,
         programName,
         instructionName: 'Unknown',
     };

@@ -29,7 +29,7 @@
         "clean": "rm -rf dist"
     },
     "dependencies": {
-        "@solana/web3.js": "^1.95.0",
+        "@solana/kit": "^4.0.0",
         "bs58": "^5.0.0"
     },
     "peerDependencies": {

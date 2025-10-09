@@ -2,10 +2,10 @@
  * Fetch transaction details from RPC
  */
 
-import { Connection, ParsedTransactionWithMeta, VersionedTransactionResponse } from '@solana/web3.js';
+import { createSolanaRpc, signature as createSignature } from '@solana/kit';
 
 export interface FetchTransactionResult {
-    transaction: ParsedTransactionWithMeta | null;
+    transaction: any | null;
     error?: string;
 }
 
@@ -18,17 +18,39 @@ export async function fetchTransactionDetails(
     rpcUrl: string
 ): Promise<FetchTransactionResult> {
     try {
-        const connection = new Connection(rpcUrl, 'confirmed');
+        const rpc = createSolanaRpc(rpcUrl);
         
-        const transaction = await connection.getParsedTransaction(signature, {
-            maxSupportedTransactionVersion: 0,
-            commitment: 'confirmed',
-        });
+        // Convert signature string to Signature type
+        const txSignature = createSignature(signature);
+        
+        // Try with 'confirmed' commitment first
+        let transaction = await rpc
+            .getTransaction(txSignature, {
+                encoding: 'jsonParsed',
+                maxSupportedTransactionVersion: 0,
+                commitment: 'confirmed',
+            })
+            .send();
+        
+        // If not found with 'confirmed', try with 'finalized'
+        if (!transaction) {
+            console.log('Transaction not found with confirmed commitment, trying finalized...');
+            transaction = await rpc
+                .getTransaction(txSignature, {
+                    encoding: 'jsonParsed',
+                    maxSupportedTransactionVersion: 0,
+                    commitment: 'finalized',
+                })
+                .send();
+        }
+        
+        console.log('Transaction response for', signature.slice(0, 8) + '...:', transaction);
 
         if (!transaction) {
+            console.warn('Transaction not found for signature:', signature);
             return {
                 transaction: null,
-                error: 'Transaction not found',
+                error: 'Transaction not found. It may not be confirmed yet or the RPC endpoint may be rate-limited.',
             };
         }
 
@@ -45,18 +67,19 @@ export async function fetchTransactionDetails(
 /**
  * Extract basic instruction information from a transaction
  */
-export function getInstructionSummaries(transaction: ParsedTransactionWithMeta): Array<{
+export function getInstructionSummaries(transaction: any): Array<{
     index: number;
     programId: string;
     programName?: string;
 }> {
-    const instructions = transaction.transaction.message.instructions;
+    const instructions = transaction.transaction?.message?.instructions || [];
     
-    return instructions.map((ix, index) => {
-        const programId = 'programId' in ix ? ix.programId.toBase58() : 'unknown';
+    return instructions.map((ix: any, index: number) => {
+        // Handle both parsed and unparsed instructions
+        const programId = ix.programId || ix.program || 'unknown';
         return {
             index: index + 1,
-            programId,
+            programId: typeof programId === 'string' ? programId : programId.toString(),
         };
     });
 }

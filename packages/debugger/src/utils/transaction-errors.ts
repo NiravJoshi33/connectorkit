@@ -3,8 +3,6 @@
  * Provides human-readable error messages
  */
 
-import { TransactionError } from '@solana/web3.js';
-
 const instructionErrorMessage: Map<string, string> = new Map([
     ['GenericError', 'generic instruction error'],
     ['InvalidArgument', 'invalid program argument'],
@@ -64,9 +62,16 @@ export interface ProgramError {
 }
 
 /**
- * Parse TransactionError into readable error information
+ * Transaction error type compatible with both legacy web3.js and Solana Kit
+ * Can be any error object structure or null/undefined
  */
-export function getTransactionInstructionError(error?: TransactionError | null): ProgramError | undefined {
+export type TransactionErrorType = Record<string, any> | null | undefined;
+
+/**
+ * Parse transaction error into readable error information
+ * Works with both legacy web3.js and Solana Kit error structures
+ */
+export function getTransactionInstructionError(error?: TransactionErrorType): ProgramError | undefined {
     if (!error) {
         return;
     }
@@ -108,9 +113,10 @@ function getInstructionError(error: any): string {
 }
 
 /**
- * Get a simple error message from TransactionError
+ * Get a simple error message from transaction error
+ * Works with both legacy web3.js and Solana Kit error structures
  */
-export function getSimpleErrorMessage(error?: TransactionError | null): string {
+export function getSimpleErrorMessage(error?: TransactionErrorType): string {
     if (!error) {
         return 'Unknown error';
     }

@@ -6,9 +6,9 @@
 
 import { useState, useCallback } from 'react';
 import type { TransactionActivity } from '@connector-kit/connector';
-import type { ParsedTransactionWithMeta } from '@solana/web3.js';
 import { Button, EmptyState } from '../ui-components';
-import { ExternalLinkIcon } from '../icons';
+import { ExternalLinkIcon, PassedIcon, FailedIcon } from '../icons';
+import { Spinner } from './spinner';
 import { fetchTransactionDetails } from '../utils/fetch-transaction';
 import { parseProgramLogs, getTotalComputeUnits, type InstructionLogs } from '../utils/program-logs';
 import { decodeInstruction, type DecodedInstruction } from '../utils/instruction-decoder';
@@ -57,15 +57,15 @@ function formatSignature(signature: string, chars = 8): string {
 }
 
 function getStatusColor(status: TransactionActivity['status']) {
-    if (status === 'confirmed') return '#0f0';
-    if (status === 'failed') return '#f00';
-    return '#ffaa00'; // pending
+    if (status === 'confirmed') return '#22c55e'; // green
+    if (status === 'failed') return '#ef4444'; // red
+    return '#eab308'; // yellow for pending
 }
 
 function getStatusIcon(status: TransactionActivity['status']) {
-    if (status === 'confirmed') return '✅';
-    if (status === 'failed') return '❌';
-    return '⏳';
+    if (status === 'confirmed') return <PassedIcon className="text-[#22c55e]" />;
+    if (status === 'failed') return <FailedIcon className="text-[#ef4444]" />;
+    return <Spinner size={14} className="text-[#eab308]" />; // pending
 }
 
 function getRelativeTime(timestamp: string) {
@@ -225,7 +225,7 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
     // Transaction details state
     const [showLogs, setShowLogs] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
-    const [transactionDetails, setTransactionDetails] = useState<ParsedTransactionWithMeta | null>(null);
+    const [transactionDetails, setTransactionDetails] = useState<any | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -314,7 +314,7 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                     padding: '10px 12px',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'start',
                     justifyContent: 'space-between',
                     userSelect: 'none',
                 }}
@@ -323,14 +323,14 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                 <div
                     style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'start',
                         gap: 8,
                         flex: 1,
                         minWidth: 0,
                     }}
                 >
                     {/* Status Icon */}
-                    <span style={{ fontSize: 14, flexShrink: 0 }}>{getStatusIcon(tx.status)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{getStatusIcon(tx.status)}</span>
 
                     {/* Method and Signature inline */}
                     <div
@@ -597,7 +597,9 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     wordBreak: 'break-word',
                                 }}
                             >
-                                <div style={{ fontWeight: 600, marginBottom: 4 }}>❌ Error</div>
+                                <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <FailedIcon className="text-[#ff6b6b]" /> Error
+                            </div>
                                 {transactionDetails?.meta?.err 
                                     ? getSimpleErrorMessage(transactionDetails.meta.err) 
                                     : tx.error}
@@ -848,15 +850,23 @@ function ProgramLogsView({ logs }: { logs: InstructionLogs[] }) {
                         <div
                             style={{
                                 fontWeight: 600,
-                                color: instructionLog.failed ? '#ff6b6b' : '#0f0',
+                                color: instructionLog.failed ? '#ef4444' : '#22c55e',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
                             }}
                         >
-                            {instructionLog.failed ? '❌' : '✅'} Instruction #{idx + 1}
-                            {instructionLog.invokedProgram && (
-                                <span style={{ opacity: 0.7, fontWeight: 400, marginLeft: 4 }}>
-                                    ({instructionLog.invokedProgram.slice(0, 8)}...)
-                                </span>
-                            )}
+                            <span style={{ display: 'flex', alignItems: 'center' }}>
+                                {instructionLog.failed ? <FailedIcon className="text-[#ef4444]" /> : <PassedIcon className="text-[#22c55e]" />}
+                            </span>
+                            <span>
+                                Instruction #{idx + 1}
+                                {instructionLog.invokedProgram && (
+                                    <span style={{ opacity: 0.7, fontWeight: 400, marginLeft: 4 }}>
+                                        ({instructionLog.invokedProgram.slice(0, 8)}...)
+                                    </span>
+                                )}
+                            </span>
                         </div>
                         {instructionLog.computeUnits > 0 && (
                             <div style={{ opacity: 0.6, fontSize: 8 }}>

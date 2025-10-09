@@ -2,6 +2,8 @@
  * @connector-kit/debugger - Debug Panel Icons
  */
 
+import React from 'react';
+
 export function CloseIcon({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
@@ -131,3 +133,83 @@ export function ExternalLinkIcon({ size = 14, color = 'currentColor' }: { size?:
         </svg>
     );
 }
+
+export const InProgressIcon = ({ className }: { className?: string }) => {
+    return (
+        <svg
+            aria-label="In Progress"
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            role="img"
+            focusable="false"
+            xmlns="http://www.w3.org/2000/svg"
+            className={className}
+        >
+            <rect
+                x="1"
+                y="1"
+                width="12"
+                height="12"
+                rx="6"
+                strokeWidth="2"
+                fill="none"
+                className="stroke-current"
+            />
+            <path
+                stroke="none"
+                d="M 3.5,3.5 L3.5,0 A3.5,3.5 0 0,1 3.5, 7 z"
+                transform="translate(3.5,3.5)"
+                className="fill-current"
+            />
+        </svg>
+    );
+};
+
+export const FailedIcon = ({ className }: { className?: string }) => {
+    return (
+        <svg
+            className={className}
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="#95a2b3"
+            role="img"
+            focusable="false"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14ZM5.03033 3.96967C4.73744 3.67678 4.26256 3.67678 3.96967 3.96967C3.67678 4.26256 3.67678 4.73744 3.96967 5.03033L5.93934 7L3.96967 8.96967C3.67678 9.26256 3.67678 9.73744 3.96967 10.0303C4.26256 10.3232 4.73744 10.3232 5.03033 10.0303L7 8.06066L8.96967 10.0303C9.26256 10.3232 9.73744 10.3232 10.0303 10.0303C10.3232 9.73744 10.3232 9.26256 10.0303 8.96967L8.06066 7L10.0303 5.03033C10.3232 4.73744 10.3232 4.26256 10.0303 3.96967C9.73744 3.67678 9.26256 3.67678 8.96967 3.96967L7 5.93934L5.03033 3.96967Z"
+                stroke="none"
+                className="fill-current"
+            />
+        </svg>
+    );
+};
+
+export const PassedIcon = ({ className }: { className?: string }) => {
+    return (
+        <svg
+            className={className}
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="lch(48% 59.31 288.43)"
+            role="img"
+            focusable="false"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0ZM11.101 5.10104C11.433 4.76909 11.433 4.23091 11.101 3.89896C10.7691 3.56701 10.2309 3.56701 9.89896 3.89896L5.5 8.29792L4.10104 6.89896C3.7691 6.56701 3.2309 6.56701 2.89896 6.89896C2.56701 7.2309 2.56701 7.7691 2.89896 8.10104L4.89896 10.101C5.2309 10.433 5.7691 10.433 6.10104 10.101L11.101 5.10104Z"
+                className="fill-current"
+            />
+        </svg>
+    );
+};
