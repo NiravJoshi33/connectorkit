@@ -99,7 +99,7 @@ export function LegacySolTransfer() {
         <div className="space-y-4">
             <TransactionForm
                 title="Legacy SOL Transfer"
-                description="Using @solana/web3.js v1 with wallet adapter compat layer"
+                description="Using @solana/web3.js with wallet adapter compat layer"
                 onSubmit={handleTransfer}
                 disabled={!walletAdapter.connected}
                 defaultRecipient="DemoWa11et1111111111111111111111111111111111"

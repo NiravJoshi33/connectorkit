@@ -8,6 +8,7 @@
 
 import { useState, useMemo } from 'react';
 import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components';
+import { StorageIcon, NetworkIcon, LockIcon, HealthIcon, WalletIcon } from '../icons';
 
 interface EnhancedOverviewTabProps {
     state: any;
@@ -433,7 +434,7 @@ export function EnhancedOverviewTab({
             )}
 
             {/* Storage */}
-            <CollapsibleSection icon="💾" title="STORAGE" defaultExpanded={true}>
+            <CollapsibleSection icon={<StorageIcon />} title="STORAGE" defaultExpanded={true}>
                 <Section title="Persisted State">
                     <div style={{ fontSize: 11, lineHeight: 1.8 }}>
                         <div
@@ -532,7 +533,7 @@ export function EnhancedOverviewTab({
 
             {/* Network */}
             <CollapsibleSection
-                icon="🌐"
+                icon={<NetworkIcon />}
                 title="NETWORK"
                 defaultExpanded={false}
                 badge={
@@ -555,7 +556,7 @@ export function EnhancedOverviewTab({
 
             {/* Signer Status */}
             <CollapsibleSection
-                icon="🔐"
+                icon={<LockIcon />}
                 title="SIGNER STATUS"
                 defaultExpanded={false}
                 badge={
@@ -607,7 +608,7 @@ export function EnhancedOverviewTab({
             {/* Health Check */}
             {health && (
                 <CollapsibleSection
-                    icon="⚡"
+                    icon={<HealthIcon />}
                     title="HEALTH CHECK"
                     defaultExpanded={false}
                     warning={hasHealthIssues}
@@ -721,7 +722,7 @@ export function EnhancedOverviewTab({
             {/* Available Wallets */}
             {state.wallets.length > 0 && (
                 <CollapsibleSection
-                    icon="📦"
+                    icon={<WalletIcon />}
                     title="AVAILABLE WALLETS"
                     defaultExpanded={false}
                     badge={<span style={{ fontSize: 9, opacity: 0.6 }}>({state.wallets.length} detected)</span>}

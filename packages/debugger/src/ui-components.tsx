@@ -184,7 +184,7 @@ export function CollapsibleSection({
     badge,
     warning = false,
 }: {
-    icon?: string;
+    icon?: React.ReactNode;
     title: string;
     children: React.ReactNode;
     defaultExpanded?: boolean;

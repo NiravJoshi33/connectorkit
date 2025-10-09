@@ -213,3 +213,74 @@ export const PassedIcon = ({ className }: { className?: string }) => {
         </svg>
     );
 };
+
+export function StorageIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <rect height="20" opacity="0" width="24" x="0" y="0" />
+                <path
+                    d="M2 4C2 2.89543 2.89543 2 4 2H20C21.1046 2 22 2.89543 22 4V8C22 9.10457 21.1046 10 20 10H4C2.89543 10 2 9.10457 2 8V4ZM2 12C2 10.8954 2.89543 10 4 10H20C21.1046 10 22 10.8954 22 12V16C22 17.1046 21.1046 18 20 18H4C2.89543 18 2 17.1046 2 16V12ZM4 18C2.89543 18 2 18.8954 2 20V20C2 21.1046 2.89543 22 4 22H20C21.1046 22 22 21.1046 22 20V20C22 18.8954 21.1046 18 20 18H4ZM18 6C18 6.55228 18.4477 7 19 7C19.5523 7 20 6.55228 20 6C20 5.44772 19.5523 5 19 5C18.4477 5 18 5.44772 18 6ZM18 14C18 14.5523 18.4477 15 19 15C19.5523 15 20 14.5523 20 14C20 13.4477 19.5523 13 19 13C18.4477 13 18 13.4477 18 14ZM18 20C18 20.5523 18.4477 21 19 21C19.5523 21 20 20.5523 20 20C20 19.4477 19.5523 19 19 19C18.4477 19 18 19.4477 18 20Z"
+                    fillOpacity="0.85"
+                />
+            </g>
+        </svg>
+    );
+}
+
+export function NetworkIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <rect height="24" opacity="0" width="24" x="0" y="0" />
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 19.93C7.05 19.44 4 16.08 4 12C4 11.38 4.08 10.79 4.21 10.21L9 15V16C9 17.1 9.9 18 11 18V19.93ZM17.9 17.39C17.64 16.58 16.9 16 16 16H15V13C15 12.45 14.55 12 14 12H8V10H10C10.55 10 11 9.55 11 9V7H13C14.1 7 15 6.1 15 5V4.59C17.93 5.78 20 8.65 20 12C20 14.08 19.2 15.97 17.9 17.39Z"
+                    fillOpacity="0.85"
+                />
+            </g>
+        </svg>
+    );
+}
+
+export function LockIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <rect height="24" opacity="0" width="24" x="0" y="0" />
+                <path
+                    d="M18 8H17V6C17 3.24 14.76 1 12 1C9.24 1 7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM9 6C9 4.34 10.34 3 12 3C13.66 3 15 4.34 15 6V8H9V6ZM18 20H6V10H18V20ZM12 17C13.1 17 14 16.1 14 15C14 13.9 13.1 13 12 13C10.9 13 10 13.9 10 15C10 16.1 10.9 17 12 17Z"
+                    fillOpacity="0.85"
+                />
+            </g>
+        </svg>
+    );
+}
+
+export function HealthIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <rect height="24" opacity="0" width="24" x="0" y="0" />
+                <path
+                    d="M12 2L2 7V13.09C2 19.09 6.19 24.58 12 26C17.81 24.58 22 19.09 22 13.09V7L12 2ZM11 15H9V17H7V15H5V13H7V11H9V13H11V15ZM13 11H17V13H13V11Z"
+                    fillOpacity="0.85"
+                />
+            </g>
+        </svg>
+    );
+}
+
+export function WalletIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <rect height="24" opacity="0" width="24" x="0" y="0" />
+                <path
+                    d="M21 7.28V5C21 3.9 20.1 3 19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V16.72C21.59 16.37 22 15.74 22 15V9C22 8.26 21.59 7.63 21 7.28ZM20 9V15H13V9H20ZM5 19V5H19V7H13C11.9 7 11 7.9 11 9V15C11 16.1 11.9 17 13 17H19V19H5Z"
+                    fillOpacity="0.85"
+                />
+                <circle cx="16" cy="12" r="1.5" fillOpacity="0.85" />
+            </g>
+        </svg>
+    );
+}
