@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - ALT Suggestion Card Component
- * 
+ *
  * Displays optimization suggestions for Address Lookup Tables
  */
 
@@ -51,9 +51,7 @@ export function ALTSuggestionCard({ analysis, onGenerateCode }: ALTSuggestionCar
             >
                 <span style={{ fontSize: 16 }}>💡</span>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
-                        Optimization Available
-                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 2 }}>Optimization Available</div>
                     <div style={{ fontSize: 9, opacity: 0.7 }}>{ratingDescription}</div>
                 </div>
             </div>
@@ -71,7 +69,15 @@ export function ALTSuggestionCard({ analysis, onGenerateCode }: ALTSuggestionCar
                 }}
             >
                 <div>
-                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <div
+                        style={{
+                            fontSize: 8,
+                            opacity: 0.6,
+                            marginBottom: 2,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}
+                    >
                         Current Size
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'monospace' }}>
@@ -79,7 +85,15 @@ export function ALTSuggestionCard({ analysis, onGenerateCode }: ALTSuggestionCar
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <div
+                        style={{
+                            fontSize: 8,
+                            opacity: 0.6,
+                            marginBottom: 2,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}
+                    >
                         With ALT
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'monospace', color: ratingColor }}>
@@ -87,7 +101,15 @@ export function ALTSuggestionCard({ analysis, onGenerateCode }: ALTSuggestionCar
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <div
+                        style={{
+                            fontSize: 8,
+                            opacity: 0.6,
+                            marginBottom: 2,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}
+                    >
                         Bytes Saved
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'monospace', color: '#22c55e' }}>
@@ -95,7 +117,15 @@ export function ALTSuggestionCard({ analysis, onGenerateCode }: ALTSuggestionCar
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <div
+                        style={{
+                            fontSize: 8,
+                            opacity: 0.6,
+                            marginBottom: 2,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}
+                    >
                         Reduction
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, fontFamily: 'monospace', color: '#22c55e' }}>
@@ -223,4 +253,3 @@ export function ALTSuggestionBadge({ analysis }: { analysis: ALTSavingsAnalysis 
         </span>
     );
 }
-

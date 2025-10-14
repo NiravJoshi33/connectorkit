@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Status Badge Component
- * 
+ *
  * Animated status indicators for transaction lifecycle
  */
 
@@ -193,4 +193,3 @@ export function StatusDot({ status }: { status: LiveTransactionStatus }) {
         </span>
     );
 }
-

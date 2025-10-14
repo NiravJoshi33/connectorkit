@@ -71,12 +71,14 @@ export function useWalletInfo(): UseWalletInfoReturn {
     // Map WalletInfo[] to WalletDisplayInfo[] for simplified consumption
     const mappedWallets = useMemo<WalletDisplayInfo[]>(
         () =>
-            wallets.map((walletInfo: WalletInfo): WalletDisplayInfo => ({
-                name: walletInfo.wallet.name,
-                icon: walletInfo.wallet.icon,
-                installed: walletInfo.installed,
-                connectable: walletInfo.connectable,
-            })),
+            wallets.map(
+                (walletInfo: WalletInfo): WalletDisplayInfo => ({
+                    name: walletInfo.wallet.name,
+                    icon: walletInfo.wallet.icon,
+                    installed: walletInfo.installed,
+                    connectable: walletInfo.connectable,
+                }),
+            ),
         [wallets],
     );
 

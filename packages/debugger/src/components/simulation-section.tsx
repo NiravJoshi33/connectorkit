@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Simulation Section Component
- * 
+ *
  * Displays simulation results in transaction detail view
  */
 
@@ -81,9 +81,7 @@ export function SimulationSection({
                 }}
             >
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {simulationResult && (
-                        <span>{isExpanded ? '▼' : '▶'}</span>
-                    )}
+                    {simulationResult && <span>{isExpanded ? '▼' : '▶'}</span>}
                     <span>🔍 Simulation</span>
                     {simulationResult && (
                         <span
@@ -131,9 +129,7 @@ export function SimulationSection({
                     {/* Compute Units */}
                     {simulationResult.computeUnitsConsumed !== null && (
                         <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>
-                                Compute Units
-                            </div>
+                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>Compute Units</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div style={{ flex: 1 }}>
                                     <div
@@ -174,9 +170,7 @@ export function SimulationSection({
                     {/* Estimated Fee */}
                     {simulationResult.estimatedFee !== null && (
                         <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>
-                                Estimated Fee
-                            </div>
+                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>Estimated Fee</div>
                             <div style={{ fontSize: 11, fontWeight: 600, fontFamily: 'monospace' }}>
                                 {formatFee(simulationResult.estimatedFee)}
                             </div>
@@ -214,9 +208,7 @@ export function SimulationSection({
                                     }}
                                 >
                                     <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.message}</div>
-                                    {item.action && (
-                                        <div style={{ opacity: 0.8, marginBottom: 4 }}>{item.action}</div>
-                                    )}
+                                    {item.action && <div style={{ opacity: 0.8, marginBottom: 4 }}>{item.action}</div>}
                                     {item.code && (
                                         <pre
                                             style={{
@@ -280,9 +272,7 @@ export function SimulationSection({
                     {/* Warnings */}
                     {simulationResult.warnings.length > 0 && (
                         <div style={{ marginTop: 12 }}>
-                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>
-                                Warnings
-                            </div>
+                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4 }}>Warnings</div>
                             {simulationResult.warnings.map((warning, idx) => (
                                 <div
                                     key={idx}
@@ -306,4 +296,3 @@ export function SimulationSection({
         </div>
     );
 }
-

@@ -1,13 +1,13 @@
 /**
  * @connector-kit/debugger - Code Snippet Generator
- * 
+ *
  * Generates ready-to-use code snippets for creating and using
  * Address Lookup Tables based on analysis.
  */
 
 /**
  * Generate code snippet for creating an Address Lookup Table
- * 
+ *
  * @param addresses - Array of addresses to include in the ALT
  * @returns Copy-paste ready TypeScript code
  */
@@ -95,7 +95,7 @@ async function createLookupTable(
 
 /**
  * Generate code snippet for using an existing ALT
- * 
+ *
  * @param lookupTableAddress - Address of the ALT to use
  * @returns Copy-paste ready TypeScript code
  */
@@ -147,12 +147,15 @@ async function sendTransactionWithALT(
 
 /**
  * Generate simplified code for quick copy-paste
- * 
+ *
  * @param addresses - Addresses for the ALT
  * @returns Minimal code snippet
  */
 export function generateQuickALTCode(addresses: string[]): string {
-    const addressList = addresses.slice(0, 10).map(addr => `  new PublicKey("${addr}")`).join(',\n');
+    const addressList = addresses
+        .slice(0, 10)
+        .map(addr => `  new PublicKey("${addr}")`)
+        .join(',\n');
     const hasMore = addresses.length > 10;
 
     return `// Quick ALT Setup
@@ -199,7 +202,7 @@ const message = new TransactionMessage({
 
 /**
  * Generate explanation text for ALT benefits
- * 
+ *
  * @param bytesSaved - Estimated bytes saved
  * @param percentReduction - Percentage reduction
  * @returns Explanation text
@@ -225,4 +228,3 @@ export function generateALTExplanation(bytesSaved: number, percentReduction: num
 - Programs you interact with frequently
 - Bundle transactions approaching the 1232 byte limit`;
 }
-

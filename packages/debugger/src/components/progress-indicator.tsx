@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Progress Indicator Component
- * 
+ *
  * Visual progress indicator for transaction lifecycle
  */
 
@@ -30,7 +30,7 @@ function getStepIndex(status: LiveTransactionStatus): number {
     if (status === 'failed') return -1;
     if (status === 'simulated') return 2; // Between simulating and signing
     if (status === 'confirming') return 4; // Same as sending essentially
-    
+
     const index = STEPS.findIndex(step => step.status === status);
     return index >= 0 ? index : 0;
 }
@@ -124,11 +124,7 @@ export function ProgressIndicator({ status }: ProgressIndicatorProps) {
                                           ? '#3b82f6'
                                           : 'rgba(255, 255, 255, 0.1)',
                                     border: `2px solid ${
-                                        isComplete
-                                            ? '#22c55e'
-                                            : isCurrent
-                                              ? '#3b82f6'
-                                              : 'rgba(255, 255, 255, 0.2)'
+                                        isComplete ? '#22c55e' : isCurrent ? '#3b82f6' : 'rgba(255, 255, 255, 0.2)'
                                     }`,
                                     display: 'flex',
                                     alignItems: 'center',
@@ -160,7 +156,10 @@ export function ProgressIndicator({ status }: ProgressIndicatorProps) {
                                     fontSize: 8,
                                     marginTop: 4,
                                     fontWeight: isCurrent ? 600 : 400,
-                                    color: isComplete || isCurrent ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)',
+                                    color:
+                                        isComplete || isCurrent
+                                            ? 'rgba(255, 255, 255, 0.9)'
+                                            : 'rgba(255, 255, 255, 0.4)',
                                     whiteSpace: 'nowrap',
                                 }}
                             >
@@ -184,4 +183,3 @@ export function ProgressIndicator({ status }: ProgressIndicatorProps) {
         </div>
     );
 }
-

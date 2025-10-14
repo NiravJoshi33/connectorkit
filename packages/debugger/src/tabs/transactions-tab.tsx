@@ -615,10 +615,16 @@ function TransactionItem({
                                 }}
                             >
                                 {metadata.fee !== undefined && metadata.fee !== null && (
-                                    <DetailRow label="Fee" value={`${((metadata.fee as number) / 1_000_000_000).toFixed(6)} SOL`} />
+                                    <DetailRow
+                                        label="Fee"
+                                        value={`${((metadata.fee as number) / 1_000_000_000).toFixed(6)} SOL`}
+                                    />
                                 )}
                                 {metadata.computeUnits !== undefined && metadata.computeUnits !== null && (
-                                    <DetailRow label="Compute Units" value={(metadata.computeUnits as number).toLocaleString()} />
+                                    <DetailRow
+                                        label="Compute Units"
+                                        value={(metadata.computeUnits as number).toLocaleString()}
+                                    />
                                 )}
                                 {metadata.slot !== undefined && metadata.slot !== null && (
                                     <DetailRow label="Slot" value={(metadata.slot as number).toLocaleString()} />
@@ -638,7 +644,9 @@ function TransactionItem({
                                 {metadata.version !== undefined && metadata.version !== null && (
                                     <DetailRow
                                         label="Version"
-                                        value={String(metadata.version === 'legacy' ? 'Legacy' : `v${metadata.version}`)}
+                                        value={String(
+                                            metadata.version === 'legacy' ? 'Legacy' : `v${metadata.version}`,
+                                        )}
                                     />
                                 )}
                                 {metadata.confirmationTime !== undefined && metadata.confirmationTime !== null && (

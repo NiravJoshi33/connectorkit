@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Address Frequency Tracker
- * 
+ *
  * Tracks address usage across transactions to identify ALT candidates.
  * Addresses that appear frequently across multiple transactions are good
  * candidates for Address Lookup Tables.
@@ -30,7 +30,7 @@ class AddressTrackerClass {
 
     /**
      * Track addresses from a transaction
-     * 
+     *
      * @param addresses - Array of account addresses from transaction
      */
     trackTransaction(addresses: string[]): void {
@@ -46,7 +46,7 @@ class AddressTrackerClass {
 
     /**
      * Get addresses that appear frequently (ALT candidates)
-     * 
+     *
      * @param minFrequency - Minimum number of appearances (default: 3)
      * @returns Array of address statistics sorted by frequency (descending)
      */
@@ -59,7 +59,7 @@ class AddressTrackerClass {
 
     /**
      * Get all tracked addresses with their frequencies
-     * 
+     *
      * @returns Array of all address statistics sorted by frequency (descending)
      */
     getAllAddresses(): AddressStats[] {
@@ -70,7 +70,7 @@ class AddressTrackerClass {
 
     /**
      * Get frequency for a specific address
-     * 
+     *
      * @param address - Address to query
      * @returns Number of times address appeared
      */
@@ -94,7 +94,7 @@ class AddressTrackerClass {
 
     /**
      * Calculate total potential savings if all frequent addresses were in ALT
-     * 
+     *
      * @param minFrequency - Minimum frequency to consider (default: 3)
      * @returns Total bytes that could be saved
      */
@@ -112,7 +112,7 @@ class AddressTrackerClass {
 
     /**
      * Create address statistics object with calculated savings
-     * 
+     *
      * @param address - The address
      * @param count - Number of occurrences
      * @returns Address statistics with potential savings
@@ -141,7 +141,7 @@ export const AddressTracker = new AddressTrackerClass();
 
 /**
  * Get human-readable name for known Solana programs
- * 
+ *
  * @param address - Program address
  * @returns Display name or undefined
  */
@@ -151,7 +151,7 @@ function getProgramName(address: string): string | undefined {
         TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA: 'Token Program',
         TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb: 'Token-2022 Program',
         ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL: 'Associated Token Program',
-        'Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo': 'Memo Program',
+        Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo: 'Memo Program',
         MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr: 'Memo Program (v2)',
         ComputeBudget111111111111111111111111111111: 'Compute Budget Program',
         Ed25519SigVerify111111111111111111111111111: 'Ed25519 Program',
@@ -164,7 +164,7 @@ function getProgramName(address: string): string | undefined {
 
 /**
  * Extract account addresses from a transaction for tracking
- * 
+ *
  * @param transaction - Transaction object (from RPC response)
  * @returns Array of account addresses
  */
@@ -218,4 +218,3 @@ export function extractAccountAddresses(transaction: unknown): string[] {
         return [];
     }
 }
-

@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Simulation Comparison Component
- * 
+ *
  * Side-by-side comparison of simulation results (with/without ALT)
  */
 
@@ -31,12 +31,8 @@ export function SimulationComparisonView({ comparison }: SimulationComparisonPro
         >
             {/* Header */}
             <div style={{ marginBottom: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
-                    Simulation Comparison
-                </div>
-                <div style={{ fontSize: 9, opacity: 0.6 }}>
-                    Without ALT vs. With ALT
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Simulation Comparison</div>
+                <div style={{ fontSize: 9, opacity: 0.6 }}>Without ALT vs. With ALT</div>
             </div>
 
             {/* Comparison Grid */}
@@ -121,9 +117,7 @@ export function SimulationComparisonView({ comparison }: SimulationComparisonPro
                         >
                             -{savings.computeUnits} CU
                             <br />
-                            <span style={{ fontSize: 8, opacity: 0.8 }}>
-                                ({savings.percentReduction.toFixed(1)}%)
-                            </span>
+                            <span style={{ fontSize: 8, opacity: 0.8 }}>({savings.percentReduction.toFixed(1)}%)</span>
                         </div>
                     )}
                 </div>
@@ -224,9 +218,7 @@ function ComparisonMetric({
                 padding: 8,
                 marginBottom: 6,
                 backgroundColor: highlight ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255, 255, 255, 0.03)',
-                border: highlight
-                    ? '1px solid rgba(34, 197, 94, 0.2)'
-                    : '1px solid rgba(255, 255, 255, 0.05)',
+                border: highlight ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
                 borderRadius: 4,
             }}
         >
@@ -237,4 +229,3 @@ function ComparisonMetric({
         </div>
     );
 }
-

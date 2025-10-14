@@ -33,14 +33,12 @@ export class StateManager {
                     (nextState as Record<string, unknown>)[stateKey] = value;
                     hasChanges = true;
                 }
-            }
-            else if (value && typeof value === 'object' && currentValue && typeof currentValue === 'object') {
+            } else if (value && typeof value === 'object' && currentValue && typeof currentValue === 'object') {
                 if (!this.objectsEqual(value, currentValue)) {
                     (nextState as Record<string, unknown>)[stateKey] = value;
                     hasChanges = true;
                 }
-            }
-            else if (currentValue !== value) {
+            } else if (currentValue !== value) {
                 (nextState as Record<string, unknown>)[stateKey] = value;
                 hasChanges = true;
             }

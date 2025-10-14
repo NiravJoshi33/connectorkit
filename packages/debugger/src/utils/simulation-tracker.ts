@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Simulation Tracker
- * 
+ *
  * Tracks simulation results across the session for statistics and analysis
  */
 
@@ -23,7 +23,7 @@ class SimulationTrackerClass {
 
     /**
      * Track a simulation result
-     * 
+     *
      * @param result - Simulation result
      * @param transactionSize - Transaction size in bytes
      * @param usedALT - Whether transaction used Address Lookup Table
@@ -38,39 +38,34 @@ class SimulationTrackerClass {
 
     /**
      * Get overall success rate
-     * 
+     *
      * @returns Success rate as percentage (0-100)
      */
     getSuccessRate(): number {
         if (this.simulations.length === 0) return 0;
-        
+
         const successful = this.simulations.filter(s => s.result.success).length;
         return (successful / this.simulations.length) * 100;
     }
 
     /**
      * Get average compute units consumed
-     * 
+     *
      * @returns Average compute units
      */
     getAverageComputeUnits(): number {
-        const withComputeUnits = this.simulations.filter(
-            s => s.result.computeUnitsConsumed !== null,
-        );
+        const withComputeUnits = this.simulations.filter(s => s.result.computeUnitsConsumed !== null);
 
         if (withComputeUnits.length === 0) return 0;
 
-        const total = withComputeUnits.reduce(
-            (sum, s) => sum + (s.result.computeUnitsConsumed || 0),
-            0,
-        );
+        const total = withComputeUnits.reduce((sum, s) => sum + (s.result.computeUnitsConsumed || 0), 0);
 
         return Math.round(total / withComputeUnits.length);
     }
 
     /**
      * Get common errors encountered
-     * 
+     *
      * @returns Array of errors with frequency counts
      */
     getCommonErrors(): Array<{ error: string; count: number }> {
@@ -90,7 +85,7 @@ class SimulationTrackerClass {
 
     /**
      * Get complete statistics
-     * 
+     *
      * @returns Simulation statistics
      */
     getStatistics(): SimulationStatistics {
@@ -104,17 +99,13 @@ class SimulationTrackerClass {
 
         const avgWithALT =
             withALT.length > 0
-                ? Math.round(
-                      withALT.reduce((sum, s) => sum + (s.result.computeUnitsConsumed || 0), 0) /
-                          withALT.length,
-                  )
+                ? Math.round(withALT.reduce((sum, s) => sum + (s.result.computeUnitsConsumed || 0), 0) / withALT.length)
                 : 0;
 
         const avgWithoutALT =
             withoutALT.length > 0
                 ? Math.round(
-                      withoutALT.reduce((sum, s) => sum + (s.result.computeUnitsConsumed || 0), 0) /
-                          withoutALT.length,
+                      withoutALT.reduce((sum, s) => sum + (s.result.computeUnitsConsumed || 0), 0) / withoutALT.length,
                   )
                 : 0;
 
@@ -137,7 +128,7 @@ class SimulationTrackerClass {
 
     /**
      * Get total number of simulations
-     * 
+     *
      * @returns Total simulation count
      */
     getTotalSimulations(): number {
@@ -153,7 +144,7 @@ class SimulationTrackerClass {
 
     /**
      * Get recent simulations
-     * 
+     *
      * @param count - Number of recent simulations to return
      * @returns Array of recent simulation entries
      */
@@ -166,4 +157,3 @@ class SimulationTrackerClass {
  * Singleton instance of simulation tracker
  */
 export const SimulationTracker = new SimulationTrackerClass();
-

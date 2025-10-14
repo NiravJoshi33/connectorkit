@@ -11,7 +11,12 @@ export class TransactionTracker extends BaseCollaborator {
     private totalTransactions = 0;
     private maxTransactions: number;
 
-    constructor(stateManager: import('../core/state-manager').StateManager, eventEmitter: import('../core/event-emitter').EventEmitter, maxTransactions = 20, debug = false) {
+    constructor(
+        stateManager: import('../core/state-manager').StateManager,
+        eventEmitter: import('../core/event-emitter').EventEmitter,
+        maxTransactions = 20,
+        debug = false,
+    ) {
         super({ stateManager, eventEmitter, debug });
         this.maxTransactions = maxTransactions;
     }

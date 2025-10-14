@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Live Transaction Card Component
- * 
+ *
  * Displays individual live transaction with real-time updates
  */
 
@@ -93,7 +93,15 @@ export function LiveTransactionCard({ transaction, onClear }: LiveTransactionCar
 
                     {/* Size Analysis */}
                     <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div
+                            style={{
+                                fontSize: 9,
+                                opacity: 0.6,
+                                marginBottom: 6,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                            }}
+                        >
                             Transaction Size
                         </div>
                         <SizeBadge analysis={sizeAnalysis} showPercentage />
@@ -223,7 +231,15 @@ export function LiveTransactionCard({ transaction, onClear }: LiveTransactionCar
                     {/* Signature (if available) */}
                     {transaction.signature && (
                         <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <div
+                                style={{
+                                    fontSize: 9,
+                                    opacity: 0.6,
+                                    marginBottom: 4,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.5,
+                                }}
+                            >
                                 Signature
                             </div>
                             <div
@@ -302,4 +318,3 @@ function getTimeAgo(timestamp: string): string {
     if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
     return `${Math.floor(ms / 3600000)}h ago`;
 }
-

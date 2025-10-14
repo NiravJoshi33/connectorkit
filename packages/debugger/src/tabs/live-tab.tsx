@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Live Tab
- * 
+ *
  * Real-time transaction monitoring with automatic simulation
  */
 
@@ -27,17 +27,15 @@ export function LiveTab({ client, rpcUrl }: LiveTabProps) {
     const [config] = useState(() => {
         try {
             const stored = localStorage.getItem('connector-debugger:auto-sim-config');
-            return stored ? { ...DEFAULT_AUTO_SIMULATION_CONFIG, ...JSON.parse(stored) } : DEFAULT_AUTO_SIMULATION_CONFIG;
+            return stored
+                ? { ...DEFAULT_AUTO_SIMULATION_CONFIG, ...JSON.parse(stored) }
+                : DEFAULT_AUTO_SIMULATION_CONFIG;
         } catch {
             return DEFAULT_AUTO_SIMULATION_CONFIG;
         }
     });
 
-    const { liveTransactions, clearTransaction, clearAll, activeCount } = useAutoSimulation(
-        client,
-        rpcUrl,
-        config,
-    );
+    const { liveTransactions, clearTransaction, clearAll, activeCount } = useAutoSimulation(client, rpcUrl, config);
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -129,12 +127,13 @@ export function LiveTab({ client, rpcUrl }: LiveTabProps) {
                         lineHeight: 1.6,
                     }}
                 >
-                    <div style={{ fontWeight: 600, marginBottom: 6, color: '#3b82f6' }}>
-                        💡 How it works
-                    </div>
+                    <div style={{ fontWeight: 600, marginBottom: 6, color: '#3b82f6' }}>💡 How it works</div>
                     <div style={{ opacity: 0.9 }}>
-                        When you call <code style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', padding: '2px 4px', borderRadius: 3 }}>signer.signAndSendTransaction()</code>,
-                        this tab automatically:
+                        When you call{' '}
+                        <code style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', padding: '2px 4px', borderRadius: 3 }}>
+                            signer.signAndSendTransaction()
+                        </code>
+                        , this tab automatically:
                         <ul style={{ marginTop: 6, marginBottom: 0, paddingLeft: 20 }}>
                             <li>Simulates your transaction before wallet popup</li>
                             <li>Shows if it will succeed and compute units needed</li>
@@ -148,4 +147,3 @@ export function LiveTab({ client, rpcUrl }: LiveTabProps) {
         </div>
     );
 }
-

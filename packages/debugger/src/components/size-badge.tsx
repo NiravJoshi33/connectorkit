@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Size Badge Component
- * 
+ *
  * Visual indicator for transaction size with color coding
  */
 
@@ -16,7 +16,7 @@ interface SizeBadgeProps {
 
 /**
  * Transaction size badge with color-coded visual indicator
- * 
+ *
  * @param props - Component props
  */
 export function SizeBadge({ analysis, showPercentage = false, compact = false }: SizeBadgeProps) {
@@ -57,13 +57,9 @@ export function SizeBadge({ analysis, showPercentage = false, compact = false }:
         >
             <span style={{ fontSize: 12 }}>{icon}</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <span style={{ color, fontFamily: 'monospace' }}>
-                    {sizeInBytes} bytes
-                </span>
+                <span style={{ color, fontFamily: 'monospace' }}>{sizeInBytes} bytes</span>
                 {showPercentage && (
-                    <span style={{ opacity: 0.7, fontSize: 8 }}>
-                        {percentOfLimit.toFixed(1)}% of limit
-                    </span>
+                    <span style={{ opacity: 0.7, fontSize: 8 }}>{percentOfLimit.toFixed(1)}% of limit</span>
                 )}
             </div>
         </div>
@@ -90,4 +86,3 @@ export function SizeIndicator({ analysis }: { analysis: TransactionSizeAnalysis 
         </span>
     );
 }
-

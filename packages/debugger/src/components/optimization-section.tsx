@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Optimization Section Component
- * 
+ *
  * Displays optimization analysis in transaction detail view
  */
 
@@ -101,9 +101,7 @@ export function OptimizationSection({ altSavings, altUsage }: OptimizationSectio
                                     <div style={{ fontSize: 11, fontWeight: 600, color: '#22c55e' }}>
                                         Using Address Lookup Table
                                     </div>
-                                    <div style={{ fontSize: 9, opacity: 0.7 }}>
-                                        {formatALTUsage(altUsage)}
-                                    </div>
+                                    <div style={{ fontSize: 9, opacity: 0.7 }}>{formatALTUsage(altUsage)}</div>
                                 </div>
                             </div>
 
@@ -156,8 +154,8 @@ export function OptimizationSection({ altSavings, altUsage }: OptimizationSectio
                                     color: '#3b82f6',
                                 }}
                             >
-                                💡 This transaction uses ALT but could be optimized further by including more
-                                addresses (potential {altSavings.percentReduction.toFixed(0)}% additional reduction).
+                                💡 This transaction uses ALT but could be optimized further by including more addresses
+                                (potential {altSavings.percentReduction.toFixed(0)}% additional reduction).
                             </div>
                         </div>
                     )}
@@ -166,4 +164,3 @@ export function OptimizationSection({ altSavings, altUsage }: OptimizationSectio
         </div>
     );
 }
-

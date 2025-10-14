@@ -127,7 +127,7 @@ Every transaction is analyzed for size efficiency:
 ✅ Transfer SOL
    234 bytes ✅ Optimal
 
-⚠️ Token Swap  
+⚠️ Token Swap
    892 bytes ⚠️ Could optimize -40%
    💡 -40% optimization available
 
@@ -137,6 +137,7 @@ Every transaction is analyzed for size efficiency:
 ```
 
 **Size Categories:**
+
 - ✅ **Optimal** (<500 bytes): No optimization needed
 - ⚡ **Moderate** (500-800 bytes): Good, could be improved
 - ⚠️ **Heavy** (800-1232 bytes): Should optimize
@@ -147,18 +148,21 @@ Every transaction is analyzed for size efficiency:
 Based on real-world data showing **40-50% typical size reductions**:
 
 **Automatic Detection:**
+
 - Identifies transactions that would benefit from ALTs
 - Tracks address frequency across your entire session
 - Calculates potential byte savings and compression ratios
 - Only suggests optimization when worthwhile (>20% reduction)
 
 **Smart Recommendations:**
+
 - Shows which addresses to include in your lookup table
 - Prioritizes frequently used addresses
 - Estimates exact byte savings
 - Provides compression ratio (e.g., 1.87:1)
 
 **Ready-to-Use Code:**
+
 - Click "Generate Code" for copy-paste ALT setup
 - Includes both creation and usage examples
 - Optimized for your specific address patterns
@@ -169,18 +173,21 @@ Based on real-world data showing **40-50% typical size reductions**:
 New dedicated tab for session-wide analysis:
 
 **Session Overview:**
+
 - Total transactions tracked
 - Unique addresses seen
 - Number of ALT candidates (addresses appearing 3+ times)
 - Total potential byte savings
 
 **Top ALT Candidates:**
+
 - Ranked list of most frequently used addresses
 - Shows appearance count and potential savings per address
 - Identifies known programs (Token Program, System Program, etc.)
 - Click any address to copy to clipboard
 
 **Quick Actions:**
+
 - Generate complete ALT creation code
 - Copy all candidate addresses at once
 - Reset statistics to start fresh analysis
@@ -285,6 +292,7 @@ With animated pulsing dots for active steps.
 ### Benefits
 
 **Catch Errors Early:**
+
 ```
 ❌ SIMULATION FAILED
 
@@ -298,6 +306,7 @@ Required: 0.1 SOL
 ```
 
 **Validate Optimizations:**
+
 ```
 Without ALT: 1,536 bytes (would fail)
 With ALT: 871 bytes (will succeed)
@@ -306,6 +315,7 @@ With ALT: 871 bytes (will succeed)
 ```
 
 **Track Accuracy:**
+
 ```
 Simulated vs Actual Results:
 Compute: 2,802 CU vs 2,801 CU (99.96% match)
@@ -322,7 +332,7 @@ Live tab integrates with Optimization tab to show:
 🔍 Simulation Statistics
    Success Rate: 94.7% (18/19)
    Avg Compute Units: 2.3K CU
-   
+
    With ALT Avg: 2.1K CU (19 simulations)
    Compute Savings: -200 CU (8.7% reduction)
 ```
@@ -385,16 +395,19 @@ Maps 50+ Solana error codes to readable descriptions:
 Based on actual measurements from production Solana transactions:
 
 **Single Token Purchase:**
+
 - Without ALT: 660 bytes
-- With ALT: 353 bytes  
+- With ALT: 353 bytes
 - **Savings: 307 bytes (46.5% reduction)**
 
 **Bundle Transaction (Multiple Buyers):**
+
 - Without ALT: 1,536 bytes (FAILS - exceeds limit)
 - With ALT: 871 bytes (SUCCESS)
 - **Result: Transaction that would fail now succeeds**
 
 **DeFi Swap (Complex Multi-Program):**
+
 - Without ALT: 892 bytes
 - With ALT: 534 bytes
 - **Savings: 358 bytes (40.1% reduction)**
@@ -402,12 +415,14 @@ Based on actual measurements from production Solana transactions:
 ### When to Use ALT
 
 The debugger will suggest ALT optimization when:
+
 1. Transaction is heavy (>800 bytes) or failed (>1232 bytes)
 2. Multiple addresses appear repeatedly
 3. Potential savings exceed 20%
 4. You have 5+ repeated addresses
 
 ALTs work best for:
+
 - Multi-instruction transactions
 - Programs you interact with frequently
 - Bundle transactions
@@ -430,21 +445,21 @@ await signer.signAndSendTransaction(transaction);
 ### Behind the Scenes
 
 1. **Event Emission** (Connector)
-   - Before wallet popup: Emits `transaction:preparing` event
-   - Contains transaction bytes and size
-   - Zero performance overhead
+    - Before wallet popup: Emits `transaction:preparing` event
+    - Contains transaction bytes and size
+    - Zero performance overhead
 
 2. **Auto-Simulation** (Debugger)
-   - Catches preparing event
-   - Simulates transaction immediately (~500ms)
-   - Shows results in Live tab
-   - Calculates optimization opportunities
+    - Catches preparing event
+    - Simulates transaction immediately (~500ms)
+    - Shows results in Live tab
+    - Calculates optimization opportunities
 
 3. **Lifecycle Tracking** (Debugger)
-   - Updates as transaction progresses
-   - Signing → Sending → Confirming → Confirmed
-   - Compares simulated vs actual results
-   - Auto-clears after 5 seconds
+    - Updates as transaction progresses
+    - Signing → Sending → Confirming → Confirmed
+    - Compares simulated vs actual results
+    - Auto-clears after 5 seconds
 
 ### Performance Impact
 

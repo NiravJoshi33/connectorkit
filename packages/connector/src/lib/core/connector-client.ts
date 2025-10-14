@@ -325,10 +325,7 @@ export class ConnectorClient {
      */
     getDebugMetrics(): ConnectorDebugMetrics {
         const snapshot = this.stateManager.getSnapshot();
-        this.debugMetrics.updateListenerCounts(
-            this.eventEmitter.getListenerCount(),
-            0,
-        );
+        this.debugMetrics.updateListenerCounts(this.eventEmitter.getListenerCount(), 0);
         return this.debugMetrics.getMetrics();
     }
 

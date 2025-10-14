@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Optimization Tab
- * 
+ *
  * Session-wide statistics and ALT recommendations
  */
 
@@ -27,7 +27,7 @@ export function OptimizationTab() {
     const uniqueAddressCount = AddressTracker.getUniqueAddressCount();
     const topCandidates = AddressTracker.getTopCandidates(3); // Min frequency 3
     const totalPotentialSavings = AddressTracker.getTotalPotentialSavings(3);
-    
+
     // Get simulation statistics
     const simStats = SimulationTracker.getStatistics();
 
@@ -83,9 +83,7 @@ export function OptimizationTab() {
                     marginBottom: 12,
                 }}
             >
-                <div style={{ fontSize: 10, fontWeight: 600, marginBottom: 10, opacity: 0.9 }}>
-                    📊 Session Overview
-                </div>
+                <div style={{ fontSize: 10, fontWeight: 600, marginBottom: 10, opacity: 0.9 }}>📊 Session Overview</div>
                 <div
                     style={{
                         display: 'grid',
@@ -94,15 +92,29 @@ export function OptimizationTab() {
                     }}
                 >
                     <div>
-                        <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div
+                            style={{
+                                fontSize: 8,
+                                opacity: 0.6,
+                                marginBottom: 4,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                            }}
+                        >
                             Transactions
                         </div>
-                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>
-                            {transactionCount}
-                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>{transactionCount}</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div
+                            style={{
+                                fontSize: 8,
+                                opacity: 0.6,
+                                marginBottom: 4,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                            }}
+                        >
                             Unique Addresses
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>
@@ -110,7 +122,15 @@ export function OptimizationTab() {
                         </div>
                     </div>
                     <div>
-                        <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div
+                            style={{
+                                fontSize: 8,
+                                opacity: 0.6,
+                                marginBottom: 4,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                            }}
+                        >
                             ALT Candidates
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: '#3b82f6' }}>
@@ -118,7 +138,15 @@ export function OptimizationTab() {
                         </div>
                     </div>
                     <div>
-                        <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div
+                            style={{
+                                fontSize: 8,
+                                opacity: 0.6,
+                                marginBottom: 4,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                            }}
+                        >
                             Potential Savings
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: '#22c55e' }}>
@@ -150,7 +178,15 @@ export function OptimizationTab() {
                         }}
                     >
                         <div>
-                            <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <div
+                                style={{
+                                    fontSize: 8,
+                                    opacity: 0.6,
+                                    marginBottom: 4,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.5,
+                                }}
+                            >
                                 Success Rate
                             </div>
                             <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: '#22c55e' }}>
@@ -161,7 +197,15 @@ export function OptimizationTab() {
                             </div>
                         </div>
                         <div>
-                            <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <div
+                                style={{
+                                    fontSize: 8,
+                                    opacity: 0.6,
+                                    marginBottom: 4,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.5,
+                                }}
+                            >
                                 Avg Compute Units
                             </div>
                             <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: '#3b82f6' }}>
@@ -171,10 +215,25 @@ export function OptimizationTab() {
                         {simStats.withALT.count > 0 && (
                             <>
                                 <div>
-                                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 8,
+                                            opacity: 0.6,
+                                            marginBottom: 4,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
                                         With ALT Avg
                                     </div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', color: '#22c55e' }}>
+                                    <div
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            fontFamily: 'monospace',
+                                            color: '#22c55e',
+                                        }}
+                                    >
                                         {formatComputeUnits(simStats.withALT.averageComputeUnits)}
                                     </div>
                                     <div style={{ fontSize: 8, opacity: 0.5 }}>
@@ -182,17 +241,38 @@ export function OptimizationTab() {
                                     </div>
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: 8, opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 8,
+                                            opacity: 0.6,
+                                            marginBottom: 4,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
                                         Savings
                                     </div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', color: '#22c55e' }}>
+                                    <div
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            fontFamily: 'monospace',
+                                            color: '#22c55e',
+                                        }}
+                                    >
                                         {simStats.withoutALT.averageComputeUnits > 0
                                             ? `-${formatComputeUnits(simStats.withoutALT.averageComputeUnits - simStats.withALT.averageComputeUnits)}`
                                             : 'N/A'}
                                     </div>
                                     {simStats.withoutALT.averageComputeUnits > 0 && (
                                         <div style={{ fontSize: 8, opacity: 0.5 }}>
-                                            {(((simStats.withoutALT.averageComputeUnits - simStats.withALT.averageComputeUnits) / simStats.withoutALT.averageComputeUnits) * 100).toFixed(1)}% reduction
+                                            {(
+                                                ((simStats.withoutALT.averageComputeUnits -
+                                                    simStats.withALT.averageComputeUnits) /
+                                                    simStats.withoutALT.averageComputeUnits) *
+                                                100
+                                            ).toFixed(1)}
+                                            % reduction
                                         </div>
                                     )}
                                 </div>
@@ -216,11 +296,10 @@ export function OptimizationTab() {
                 >
                     <div>
                         <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>📊</div>
-                        <div style={{ fontSize: 11, marginBottom: 6, opacity: 0.8 }}>
-                            No Transaction Data Yet
-                        </div>
+                        <div style={{ fontSize: 11, marginBottom: 6, opacity: 0.8 }}>No Transaction Data Yet</div>
                         <div style={{ fontSize: 9, opacity: 0.6, lineHeight: 1.5 }}>
-                            Send some transactions to see optimization<br />
+                            Send some transactions to see optimization
+                            <br />
                             recommendations and ALT candidates
                         </div>
                     </div>
@@ -238,12 +317,12 @@ export function OptimizationTab() {
                 >
                     <div>
                         <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>✨</div>
-                        <div style={{ fontSize: 11, marginBottom: 6, opacity: 0.8 }}>
-                            Transactions Look Good!
-                        </div>
+                        <div style={{ fontSize: 11, marginBottom: 6, opacity: 0.8 }}>Transactions Look Good!</div>
                         <div style={{ fontSize: 9, opacity: 0.6, lineHeight: 1.5 }}>
-                            No repeated addresses found yet.<br />
-                            ALT optimization works best with addresses<br />
+                            No repeated addresses found yet.
+                            <br />
+                            ALT optimization works best with addresses
+                            <br />
                             that appear in multiple transactions.
                         </div>
                     </div>
@@ -392,13 +471,8 @@ function AddressCandidate({ address, rank }: { address: AddressStats; rank: numb
                 </div>
 
                 {/* Copy indicator */}
-                {copied && (
-                    <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 600 }}>
-                        ✓
-                    </div>
-                )}
+                {copied && <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 600 }}>✓</div>}
             </div>
         </div>
     );
 }
-

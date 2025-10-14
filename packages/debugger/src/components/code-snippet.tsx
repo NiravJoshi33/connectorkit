@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Code Snippet Component
- * 
+ *
  * Displays code snippets with syntax highlighting and copy functionality
  */
 
@@ -140,4 +140,3 @@ export function InlineCode({ children }: { children: string }) {
         </code>
     );
 }
-

@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Auto-Simulation Hook
- * 
+ *
  * Automatically simulates transactions when connector emits preparing events
  */
 
@@ -39,13 +39,13 @@ export interface UseAutoSimulationReturn {
 
 /**
  * Hook that automatically simulates transactions when preparing
- * 
+ *
  * Listens for 'transaction:preparing' events from connector and:
  * 1. Simulates the transaction immediately
  * 2. Analyzes size and optimization opportunities
  * 3. Tracks lifecycle through completion
  * 4. Auto-clears after confirmation
- * 
+ *
  * @param client - Connector client instance
  * @param rpcUrl - RPC endpoint for simulation
  * @param config - Auto-simulation configuration
@@ -69,9 +69,7 @@ export function useAutoSimulation(
     }, []);
 
     // Count active (non-confirmed/failed) transactions
-    const activeCount = liveTransactions.filter(
-        tx => tx.status !== 'confirmed' && tx.status !== 'failed',
-    ).length;
+    const activeCount = liveTransactions.filter(tx => tx.status !== 'confirmed' && tx.status !== 'failed').length;
 
     // Auto-clear logic
     useEffect(() => {
@@ -101,7 +99,7 @@ export function useAutoSimulation(
 
         const handlePreparingEvent = async (event: unknown) => {
             const evt = event as { type: string; transaction: Uint8Array; size: number; timestamp: string };
-            
+
             if (evt.type !== 'transaction:preparing') return;
 
             console.log('[Auto-Simulation] Received transaction:preparing event:', {
@@ -168,15 +166,14 @@ export function useAutoSimulation(
                                       ...tx,
                                       status: 'simulated' as const,
                                       simulationResult: simResult,
-                                      altSuggestion:
-                                          altSavings && altSavings.worthOptimizing ? altSavings : undefined,
+                                      altSuggestion: altSavings && altSavings.worthOptimizing ? altSavings : undefined,
                                   }
                                 : tx,
                         ),
                     );
                 } catch (error) {
                     console.error('Auto-simulation failed:', error);
-                    
+
                     // Update status to show simulation failed but allow tx to proceed
                     setLiveTransactions(prev =>
                         prev.map(tx =>
@@ -252,9 +249,9 @@ export function useAutoSimulation(
         // Subscribe to all transaction events
         const unsubscribe = client.on((event: unknown) => {
             const evt = event as { type: string };
-            
+
             console.log('[Auto-Simulation] Received event:', evt.type);
-            
+
             if (evt.type === 'transaction:preparing') {
                 handlePreparingEvent(event);
             } else if (evt.type === 'transaction:signing') {
@@ -281,4 +278,3 @@ export function useAutoSimulation(
         activeCount,
     };
 }
-

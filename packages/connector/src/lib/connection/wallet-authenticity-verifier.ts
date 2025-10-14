@@ -110,10 +110,10 @@ export class WalletAuthenticityVerifier {
         // Calculate overall confidence (weighted average)
         const weights = {
             walletStandardCompliance: 0.25,
-            methodIntegrity: 0.20,
+            methodIntegrity: 0.2,
             chainSupport: 0.15,
-            maliciousPatterns: 0.30, // Highest weight - security critical
-            identityConsistency: 0.10,
+            maliciousPatterns: 0.3, // Highest weight - security critical
+            identityConsistency: 0.1,
         };
 
         const confidence =
@@ -220,14 +220,7 @@ export class WalletAuthenticityVerifier {
             }
 
             // Check for suspicious keywords in function body
-            const suspiciousKeywords = [
-                'fetch(',
-                'XMLHttpRequest',
-                'sendToServer',
-                'exfiltrate',
-                'steal',
-                'phish',
-            ];
+            const suspiciousKeywords = ['fetch(', 'XMLHttpRequest', 'sendToServer', 'exfiltrate', 'steal', 'phish'];
 
             for (const keyword of suspiciousKeywords) {
                 if (funcStr.includes(keyword)) {
@@ -288,8 +281,8 @@ export class WalletAuthenticityVerifier {
         // 1. Check for multiple wallet identity flags (impersonation attempt)
         const identityFlags = Object.keys(walletObj).filter(
             key =>
-                (key.startsWith('is') &&
-                    (key.endsWith('Wallet') || key.endsWith('wallet') || /^is[A-Z]/.test(key))) &&
+                key.startsWith('is') &&
+                (key.endsWith('Wallet') || key.endsWith('wallet') || /^is[A-Z]/.test(key)) &&
                 walletObj[key] === true,
         );
 
@@ -350,7 +343,10 @@ export class WalletAuthenticityVerifier {
     /**
      * Check if wallet identity is consistent with expected name
      */
-    private static checkIdentityConsistency(wallet: DirectWallet, expectedName: string): {
+    private static checkIdentityConsistency(
+        wallet: DirectWallet,
+        expectedName: string,
+    ): {
         score: number;
         warnings: string[];
     } {
@@ -475,7 +471,9 @@ export class WalletAuthenticityVerifier {
         lines.push(`Overall Confidence: ${Math.round(result.confidence * 100)}%`);
         lines.push('');
         lines.push('Score Breakdown:');
-        lines.push(`  - Wallet Standard Compliance: ${Math.round(result.securityScore.walletStandardCompliance * 100)}%`);
+        lines.push(
+            `  - Wallet Standard Compliance: ${Math.round(result.securityScore.walletStandardCompliance * 100)}%`,
+        );
         lines.push(`  - Method Integrity: ${Math.round(result.securityScore.methodIntegrity * 100)}%`);
         lines.push(`  - Chain Support: ${Math.round(result.securityScore.chainSupport * 100)}%`);
         lines.push(`  - Malicious Patterns: ${Math.round(result.securityScore.maliciousPatterns * 100)}%`);

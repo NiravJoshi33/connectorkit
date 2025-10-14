@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - ALT Usage Detector
- * 
+ *
  * Detects when transactions use Address Lookup Tables and analyzes
  * the compression achieved.
  */
@@ -25,11 +25,11 @@ export interface ALTUsageInfo {
 
 /**
  * Detect if a transaction uses Address Lookup Tables
- * 
+ *
  * ALTs are only supported in versioned transactions (v0).
  * They include addressTableLookups in the message which reference
  * external lookup table accounts.
- * 
+ *
  * @param transaction - Transaction object (from RPC response)
  * @returns ALT usage information
  */
@@ -99,17 +99,21 @@ export function detectALTUsage(transaction: unknown): ALTUsageInfo {
                     if (typeof accountKey === 'string') {
                         lookupTableAddresses.push(accountKey);
                     } else if (accountKey && typeof accountKey === 'object' && 'toBase58' in accountKey) {
-                        lookupTableAddresses.push(
-                            String((accountKey as { toBase58: () => string }).toBase58()),
-                        );
+                        lookupTableAddresses.push(String((accountKey as { toBase58: () => string }).toBase58()));
                     }
                 }
 
                 // Count addresses from writable and readonly indices
-                if ('writableIndexes' in lookup && Array.isArray((lookup as { writableIndexes: unknown[] }).writableIndexes)) {
+                if (
+                    'writableIndexes' in lookup &&
+                    Array.isArray((lookup as { writableIndexes: unknown[] }).writableIndexes)
+                ) {
                     numAddressesFromALT += (lookup as { writableIndexes: unknown[] }).writableIndexes.length;
                 }
-                if ('readonlyIndexes' in lookup && Array.isArray((lookup as { readonlyIndexes: unknown[] }).readonlyIndexes)) {
+                if (
+                    'readonlyIndexes' in lookup &&
+                    Array.isArray((lookup as { readonlyIndexes: unknown[] }).readonlyIndexes)
+                ) {
                     numAddressesFromALT += (lookup as { readonlyIndexes: unknown[] }).readonlyIndexes.length;
                 }
             }
@@ -153,7 +157,7 @@ export function detectALTUsage(transaction: unknown): ALTUsageInfo {
 /**
  * Estimate current transaction size from message structure
  * This is a rough approximation
- * 
+ *
  * @param message - Transaction message
  * @returns Estimated size in bytes
  */
@@ -188,7 +192,10 @@ function estimateCurrentTransactionSize(message: unknown): number {
     }
 
     // Address table lookups (if present)
-    if ('addressTableLookups' in message && Array.isArray((message as { addressTableLookups: unknown[] }).addressTableLookups)) {
+    if (
+        'addressTableLookups' in message &&
+        Array.isArray((message as { addressTableLookups: unknown[] }).addressTableLookups)
+    ) {
         const lookups = (message as { addressTableLookups: unknown[] }).addressTableLookups;
         size += 1; // compact array prefix
         size += lookups.length * 35; // rough estimate per lookup
@@ -199,7 +206,7 @@ function estimateCurrentTransactionSize(message: unknown): number {
 
 /**
  * Format ALT usage for display
- * 
+ *
  * @param usage - ALT usage info
  * @returns Human-readable summary
  */
@@ -228,7 +235,7 @@ export function formatALTUsage(usage: ALTUsageInfo): string {
 /**
  * Check if a transaction is a versioned transaction (v0)
  * Versioned transactions are required to use ALTs
- * 
+ *
  * @param transaction - Transaction object
  * @returns True if versioned (v0)
  */
@@ -252,4 +259,3 @@ export function isVersionedTransaction(transaction: unknown): boolean {
 
     return false;
 }
-

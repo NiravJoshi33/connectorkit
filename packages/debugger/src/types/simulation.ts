@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Simulation Types
- * 
+ *
  * TypeScript types for transaction simulation features
  */
 
@@ -126,4 +126,3 @@ export interface SimulationStatistics {
         averageComputeUnits: number;
     };
 }
-

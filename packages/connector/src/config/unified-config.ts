@@ -163,7 +163,9 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
         rpcUrl,
         app: {
             name: options.appName,
-            url: connectorConfig.appUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'),
+            url:
+                connectorConfig.appUrl ||
+                (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'),
         },
     };
 }

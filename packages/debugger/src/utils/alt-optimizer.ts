@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - ALT Optimization Calculator
- * 
+ *
  * Calculates potential savings from using Address Lookup Tables (ALTs).
  * Based on real-world data from transaction optimizer showing 40-50% typical savings.
  */
@@ -45,13 +45,13 @@ export interface AddressSuggestion {
 
 /**
  * Calculate potential savings from using Address Lookup Tables
- * 
+ *
  * Based on real-world measurements:
  * - Single transaction: 660 bytes → 353 bytes (46.5% reduction)
  * - Bundle transaction: 1536 bytes → 871 bytes (43.3% reduction)
  * - Each address: 32 bytes → 1 byte index (31 bytes saved)
  * - ALT overhead: ~33 bytes (32 byte table address + 1 byte version)
- * 
+ *
  * @param currentSize - Current transaction size in bytes
  * @param addresses - Array of account addresses in transaction
  * @param frequencyMap - Optional map of how often each address appears globally
@@ -143,7 +143,7 @@ export function calculateALTSavings(
 
 /**
  * Suggest best addresses for ALT based on frequency analysis
- * 
+ *
  * @param addresses - All addresses from current transaction
  * @param frequencyMap - Global frequency map across all transactions
  * @returns Address suggestions with rationale
@@ -189,7 +189,7 @@ export function suggestALTAddresses(addresses: string[], frequencyMap: Map<strin
 
 /**
  * Get a user-friendly description of the optimization rating
- * 
+ *
  * @param rating - Optimization quality rating
  * @returns Human-readable description
  */
@@ -208,7 +208,7 @@ export function getRatingDescription(rating: ALTSavingsAnalysis['rating']): stri
 
 /**
  * Get color for optimization rating (for UI)
- * 
+ *
  * @param rating - Optimization quality rating
  * @returns Hex color code
  */
@@ -228,7 +228,7 @@ export function getRatingColor(rating: ALTSavingsAnalysis['rating']): string {
 /**
  * Estimate transaction size if it were using an ALT
  * This is a rough estimation for visualization purposes
- * 
+ *
  * @param analysis - Transaction size analysis
  * @param numAddressesInALT - Number of addresses that would be in the ALT
  * @returns Estimated size with ALT
@@ -242,4 +242,3 @@ export function estimateSizeWithALT(currentSize: number, numAddressesInALT: numb
 
     return Math.max(0, currentSize - netSavings);
 }
-

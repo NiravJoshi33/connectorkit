@@ -1,6 +1,6 @@
 /**
  * @connector-kit/debugger - Transaction Size Analyzer
- * 
+ *
  * Analyzes transaction byte sizes and categorizes them relative to Solana's
  * 1232 byte transaction limit. Provides insights for optimization.
  */
@@ -38,13 +38,13 @@ export interface TransactionSizeAnalysis {
 
 /**
  * Analyze transaction size and categorize efficiency
- * 
+ *
  * Categories:
  * - optimal: < 500 bytes (40% of limit) - Excellent, no optimization needed
  * - moderate: 500-800 bytes (40-65% of limit) - Good, could be improved
  * - heavy: 800-1232 bytes (65-100% of limit) - Should optimize
  * - oversized: > 1232 bytes - WILL FAIL, must optimize
- * 
+ *
  * @param sizeInBytes - Transaction size in bytes
  * @returns Analysis result with categorization and metadata
  */
@@ -92,7 +92,7 @@ export function analyzeTransactionSize(sizeInBytes: number): TransactionSizeAnal
 
 /**
  * Extract transaction size from various transaction formats
- * 
+ *
  * @param transaction - Transaction in any format (serialized, VersionedTransaction, etc.)
  * @returns Size in bytes, or null if cannot be determined
  */
@@ -129,7 +129,7 @@ export function extractTransactionSize(transaction: unknown): number | null {
 /**
  * Estimate transaction size from parsed transaction message
  * This is an approximation when we only have the parsed structure
- * 
+ *
  * @param tx - Parsed transaction object
  * @returns Estimated size in bytes
  */
@@ -206,7 +206,7 @@ function estimateTransactionSizeFromMessage(tx: unknown): number | null {
 
 /**
  * Check if a transaction should show optimization suggestions
- * 
+ *
  * @param analysis - Transaction size analysis
  * @returns True if transaction would benefit from optimization
  */
@@ -217,7 +217,7 @@ export function shouldShowOptimizationSuggestion(analysis: TransactionSizeAnalys
 
 /**
  * Get a user-friendly size display string
- * 
+ *
  * @param sizeInBytes - Size in bytes
  * @returns Formatted string like "660 bytes" or "1.2 KB"
  */
@@ -227,4 +227,3 @@ export function formatTransactionSize(sizeInBytes: number): string {
     }
     return `${(sizeInBytes / 1024).toFixed(2)} KB`;
 }
-

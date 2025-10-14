@@ -60,10 +60,7 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
     }
 
     const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-    const commonFlagPatterns = [
-        `is${capitalizedName}`,
-        `is${capitalizedName}Wallet`,
-    ];
+    const commonFlagPatterns = [`is${capitalizedName}`, `is${capitalizedName}Wallet`];
 
     for (const flagName of commonFlagPatterns) {
         if (walletObj[flagName] === true) {
@@ -82,7 +79,11 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
 
-    constructor(stateManager: import('../core/state-manager').StateManager, eventEmitter: import('../core/event-emitter').EventEmitter, debug = false) {
+    constructor(
+        stateManager: import('../core/state-manager').StateManager,
+        eventEmitter: import('../core/event-emitter').EventEmitter,
+        debug = false,
+    ) {
         super({ stateManager, eventEmitter, debug });
     }
 
@@ -94,7 +95,7 @@ export class WalletDetector extends BaseCollaborator {
 
         try {
             const walletsApi = getWalletsRegistry();
-                const update = () => {
+            const update = () => {
                 const ws = walletsApi.get();
                 const previousCount = this.getState().wallets.length;
                 const newCount = ws.length;
