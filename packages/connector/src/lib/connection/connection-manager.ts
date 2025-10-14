@@ -1,8 +1,7 @@
 import type { Wallet, WalletAccount } from '../../types/wallets';
 import type { AccountInfo } from '../../types/accounts';
 import type { StorageAdapter } from '../../types/storage';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { BaseCollaborator } from '../core/base-collaborator';
 import type {
     StandardConnectFeature,
     StandardConnectMethod,
@@ -12,6 +11,7 @@ import type {
     StandardEventsOnMethod,
 } from '@wallet-standard/features';
 import { Address } from 'gill';
+import { MAX_POLL_ATTEMPTS, POLL_INTERVALS_MS } from '../constants';
 
 /**
  * Type-safe accessor for standard:connect feature
@@ -44,24 +44,20 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
  *
  * Manages connecting, disconnecting, account selection, and wallet event subscriptions.
  */
-export class ConnectionManager {
-    private stateManager: StateManager;
-    private eventEmitter: EventEmitter;
+export class ConnectionManager extends BaseCollaborator {
     private walletStorage?: StorageAdapter<string | undefined>;
-    private debug: boolean;
     private walletChangeUnsub: (() => void) | null = null;
-    private pollTimer: ReturnType<typeof setInterval> | null = null;
+    private pollTimer: ReturnType<typeof setTimeout> | null = null;
+    private pollAttempts = 0;
 
     constructor(
-        stateManager: StateManager,
-        eventEmitter: EventEmitter,
+        stateManager: import('../core/state-manager').StateManager,
+        eventEmitter: import('../core/event-emitter').EventEmitter,
         walletStorage?: StorageAdapter<string | undefined>,
         debug = false,
     ) {
-        this.stateManager = stateManager;
-        this.eventEmitter = eventEmitter;
+        super({ stateManager, eventEmitter, debug });
         this.walletStorage = walletStorage;
-        this.debug = debug;
     }
 
     /**
@@ -91,7 +87,7 @@ export class ConnectionManager {
             for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
             const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a));
 
-            const state = this.stateManager.getSnapshot();
+            const state = this.getState();
             const previouslySelected = state.selectedAccount;
             const previousAddresses = new Set(state.accounts.map((a: AccountInfo) => a.address));
             const firstNew = accounts.find(a => !previousAddresses.has(a.address));
@@ -108,14 +104,12 @@ export class ConnectionManager {
                 true,
             );
 
-            if (this.debug) {
-                console.log('✅ Connection successful - state updated:', {
-                    connected: true,
-                    selectedWallet: wallet.name,
-                    selectedAccount: selected,
-                    accountsCount: accounts.length,
-                });
-            }
+            this.log('✅ Connection successful - state updated:', {
+                connected: true,
+                selectedWallet: wallet.name,
+                selectedAccount: selected,
+                accountsCount: accounts.length,
+            });
 
             this.eventEmitter.emit({
                 type: 'wallet:connected',
@@ -124,7 +118,19 @@ export class ConnectionManager {
                 timestamp: new Date().toISOString(),
             });
 
-            this.walletStorage?.set(name);
+            // Save wallet name to storage (if available)
+            if (this.walletStorage) {
+                const isAvailable =
+                    !('isAvailable' in this.walletStorage) ||
+                    typeof this.walletStorage.isAvailable !== 'function' ||
+                    this.walletStorage.isAvailable();
+
+                if (isAvailable) {
+                    this.walletStorage.set(name);
+                } else {
+                    this.log('Storage not available (private browsing?), skipping wallet persistence');
+                }
+            }
 
             this.subscribeToWalletEvents();
         } catch (e) {
@@ -171,7 +177,7 @@ export class ConnectionManager {
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (wallet) {
             const disconnect = getDisconnectFeature(wallet);
             if (disconnect) {
@@ -196,14 +202,20 @@ export class ConnectionManager {
             timestamp: new Date().toISOString(),
         });
 
-        this.walletStorage?.set(undefined);
+        // Clear wallet from storage (remove key entirely)
+        if (this.walletStorage && 'clear' in this.walletStorage && typeof this.walletStorage.clear === 'function') {
+            this.walletStorage.clear();
+        } else {
+            // Fallback for storage adapters without clear()
+            this.walletStorage?.set(undefined);
+        }
     }
 
     /**
      * Select a different account
      */
     async selectAccount(address: string): Promise<void> {
-        const state = this.stateManager.getSnapshot();
+        const state = this.getState();
         const current = state.selectedWallet;
         if (!current) throw new Error('No wallet connected');
 
@@ -250,7 +262,7 @@ export class ConnectionManager {
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (!wallet) return;
 
         const eventsOn = getEventsFeature(wallet);
@@ -279,15 +291,25 @@ export class ConnectionManager {
 
     /**
      * Start polling wallet accounts (fallback when events not available)
+     * Uses exponential backoff to reduce polling frequency over time
      */
     private startPollingWalletAccounts(): void {
         if (this.pollTimer) return;
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (!wallet) return;
 
-        this.pollTimer = setInterval(() => {
+        this.pollAttempts = 0;
+
+        const poll = () => {
+            // Stop polling after max attempts
+            if (this.pollAttempts >= MAX_POLL_ATTEMPTS) {
+                this.stopPollingWalletAccounts();
+                this.log('Stopped wallet polling after max attempts');
+                return;
+            }
+
             try {
-                const state = this.stateManager.getSnapshot();
+                const state = this.getState();
                 const walletAccounts = wallet.accounts;
                 const nextAccounts = walletAccounts.map((a: WalletAccount) => this.toAccountInfo(a));
 
@@ -296,9 +318,25 @@ export class ConnectionManager {
                         accounts: nextAccounts,
                         selectedAccount: state.selectedAccount || nextAccounts[0]?.address || null,
                     });
+
+                    // Reset poll attempts on success
+                    this.pollAttempts = 0;
                 }
-            } catch (error) {}
-        }, 3000);
+            } catch (error) {
+                this.log('Wallet polling error:', error);
+            }
+
+            this.pollAttempts++;
+
+            // Get interval with exponential backoff
+            const intervalIndex = Math.min(this.pollAttempts, POLL_INTERVALS_MS.length - 1);
+            const interval = POLL_INTERVALS_MS[intervalIndex];
+
+            this.pollTimer = setTimeout(poll, interval);
+        };
+
+        // Start polling
+        poll();
     }
 
     /**
@@ -306,8 +344,9 @@ export class ConnectionManager {
      */
     private stopPollingWalletAccounts(): void {
         if (this.pollTimer) {
-            clearInterval(this.pollTimer);
+            clearTimeout(this.pollTimer);
             this.pollTimer = null;
+            this.pollAttempts = 0;
         }
     }
 

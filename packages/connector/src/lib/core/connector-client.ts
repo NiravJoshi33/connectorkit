@@ -7,7 +7,7 @@ import type {
     Listener,
 } from '../../types/connector';
 import type { TransactionActivity } from '../../types/transactions';
-import type { ConnectorEventListener } from '../../types/events';
+import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
 import type { WalletInfo } from '../../types/wallets';
 import { StateManager } from './state-manager';
@@ -19,6 +19,8 @@ import { AutoConnector } from '../connection/auto-connector';
 import { ClusterManager } from '../cluster/cluster-manager';
 import { TransactionTracker } from '../transaction/transaction-tracker';
 import { HealthMonitor } from '../health/health-monitor';
+import { getClusterRpcUrl } from '../../utils/cluster';
+import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
 
 /**
  * ConnectorClient - Lean coordinator that delegates to specialized collaborators
@@ -88,7 +90,7 @@ export class ConnectorClient {
         this.transactionTracker = new TransactionTracker(
             this.stateManager,
             this.eventEmitter,
-            20,
+            DEFAULT_MAX_TRACKED_TRANSACTIONS,
             config.debug ?? false,
         );
 
@@ -119,7 +121,7 @@ export class ConnectorClient {
                             console.error('Auto-connect error:', err);
                         }
                     });
-                }, 100);
+                }, AUTO_CONNECT_DELAY_MS);
             }
 
             this.initialized = true;
@@ -181,6 +183,23 @@ export class ConnectorClient {
     }
 
     /**
+     * Get the RPC URL for the current cluster
+     * @returns RPC URL or null if no cluster is selected
+     */
+    getRpcUrl(): string | null {
+        const cluster = this.clusterManager.getCluster();
+        if (!cluster) return null;
+        try {
+            return getClusterRpcUrl(cluster);
+        } catch (error) {
+            if (this.config.debug) {
+                console.error('Failed to get RPC URL:', error);
+            }
+            return null;
+        }
+    }
+
+    /**
      * Subscribe to state changes
      */
     subscribe(listener: Listener): () => void {
@@ -192,6 +211,55 @@ export class ConnectorClient {
      */
     getSnapshot(): ConnectorState {
         return this.stateManager.getSnapshot();
+    }
+
+    /**
+     * Reset all storage to initial values
+     * Useful for "logout", "forget this device", or clearing user data
+     *
+     * This will:
+     * - Clear saved wallet name
+     * - Clear saved account address
+     * - Reset cluster to initial value (does not clear)
+     *
+     * Note: This does NOT disconnect the wallet. Call disconnect() separately if needed.
+     *
+     * @example
+     * ```ts
+     * // Complete logout flow
+     * await client.disconnect();
+     * client.resetStorage();
+     * ```
+     */
+    resetStorage(): void {
+        if (this.config.debug) {
+            console.log('[Connector] Resetting all storage to initial values');
+        }
+
+        // Reset each storage adapter
+        const storageKeys = ['account', 'wallet', 'cluster'] as const;
+
+        for (const key of storageKeys) {
+            const storage = this.config.storage?.[key];
+
+            if (storage && 'reset' in storage && typeof storage.reset === 'function') {
+                try {
+                    storage.reset();
+                    if (this.config.debug) {
+                        console.log(`[Connector] Reset ${key} storage`);
+                    }
+                } catch (error) {
+                    if (this.config.debug) {
+                        console.error(`[Connector] Failed to reset ${key} storage:`, error);
+                    }
+                }
+            }
+        }
+
+        this.eventEmitter.emit({
+            type: 'storage:reset',
+            timestamp: new Date().toISOString(),
+        });
     }
 
     /**
@@ -213,6 +281,15 @@ export class ConnectorClient {
      */
     offAll(): void {
         this.eventEmitter.offAll();
+    }
+
+    /**
+     * Emit a connector event
+     * Internal method used by transaction signer and other components
+     * @internal
+     */
+    emitEvent(event: ConnectorEvent): void {
+        this.eventEmitter.emit(event);
     }
 
     /**

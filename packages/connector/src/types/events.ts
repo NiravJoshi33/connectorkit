@@ -44,6 +44,31 @@ export type ConnectorEvent =
           signature: string;
           status: TransactionActivity['status'];
           timestamp: string;
+      }
+    | {
+          type: 'transaction:preparing';
+          transaction: Uint8Array;
+          size: number;
+          timestamp: string;
+      }
+    | {
+          type: 'transaction:simulated';
+          success: boolean;
+          computeUnits: number | null;
+          timestamp: string;
+      }
+    | {
+          type: 'transaction:signing';
+          timestamp: string;
+      }
+    | {
+          type: 'transaction:sent';
+          signature: string;
+          timestamp: string;
+      }
+    | {
+          type: 'storage:reset';
+          timestamp: string;
       };
 
 /**
