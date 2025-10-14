@@ -154,10 +154,7 @@ export function useTransactionPreparer(): UseTransactionPreparerReturn {
             options: TransactionPrepareOptions = {},
         ): Promise<TMessage & TransactionMessageWithBlockhashLifetime> => {
             if (!client) {
-                throw new NetworkError(
-                    'RPC_ERROR',
-                    'Solana client not available. Cannot prepare transaction.',
-                );
+                throw new NetworkError('RPC_ERROR', 'Solana client not available. Cannot prepare transaction.');
             }
 
             return prepareTransaction({

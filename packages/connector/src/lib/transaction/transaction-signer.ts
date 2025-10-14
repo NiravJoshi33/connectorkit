@@ -404,12 +404,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
                 return signature;
             } catch (error) {
-                throw new TransactionError(
-                    'SEND_FAILED',
-                    'Failed to send transaction',
-                    undefined,
-                    error as Error,
-                );
+                throw new TransactionError('SEND_FAILED', 'Failed to send transaction', undefined, error as Error);
             }
         },
 
@@ -455,12 +450,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     })) as { signature: Uint8Array };
                     return result.signature;
                 } catch (error) {
-                    throw new TransactionError(
-                        'SIGNING_FAILED',
-                        'Failed to sign message',
-                        undefined,
-                        error as Error,
-                    );
+                    throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error as Error);
                 }
             },
         }),

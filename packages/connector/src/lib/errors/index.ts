@@ -39,11 +39,7 @@ export abstract class ConnectorError extends Error {
      */
     readonly timestamp: string;
 
-    constructor(
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message);
         this.name = this.constructor.name;
         this.context = context;
@@ -79,12 +75,7 @@ export class ConnectionError extends ConnectorError {
     readonly code: ConnectionErrorCode;
     readonly recoverable = true;
 
-    constructor(
-        code: ConnectionErrorCode,
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(code: ConnectionErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
     }
@@ -106,12 +97,7 @@ export class ValidationError extends ConnectorError {
     readonly code: ValidationErrorCode;
     readonly recoverable = false;
 
-    constructor(
-        code: ValidationErrorCode,
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(code: ValidationErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
     }
@@ -158,12 +144,7 @@ export class NetworkError extends ConnectorError {
     readonly code: NetworkErrorCode;
     readonly recoverable = true;
 
-    constructor(
-        code: NetworkErrorCode,
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(code: NetworkErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
     }
@@ -183,12 +164,7 @@ export class TransactionError extends ConnectorError {
     readonly code: TransactionErrorCode;
     readonly recoverable: boolean;
 
-    constructor(
-        code: TransactionErrorCode,
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(code: TransactionErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
         // Some transaction errors are recoverable (user rejected, network issue)
