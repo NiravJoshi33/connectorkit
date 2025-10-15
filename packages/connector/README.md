@@ -113,6 +113,7 @@ function SendTransaction() {
     - [Wallet Adapter Compatibility](#wallet-adapter-compatibility)
 - [Configuration](#configuration)
 - [Advanced Usage](#advanced-usage)
+- [Testing](#testing)
 - [API Reference](#complete-api-reference)
 
 ---
@@ -690,6 +691,150 @@ import { useConnector, useAccount } from '@connector-kit/connector/react';
 // Wallet adapter compatibility bridge
 import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
 ```
+
+---
+
+## Testing
+
+The connector package includes a comprehensive test suite built with Vitest. All tests are located in `src/__tests__/` and co-located with source files.
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with UI
+pnpm test:ui
+
+# Generate coverage report
+pnpm test:coverage
+```
+
+### Test Coverage
+
+The package maintains high test coverage:
+- **Lines**: 80%+
+- **Functions**: 80%+
+- **Branches**: 75%+
+- **Statements**: 80%+
+
+### Test Structure
+
+```
+src/
+├── lib/
+│   ├── core/
+│   │   ├── state-manager.ts
+│   │   └── state-manager.test.ts      # Unit tests
+│   └── connection/
+│       ├── connection-manager.ts
+│       └── connection-manager.test.ts # Unit tests
+├── hooks/
+│   ├── use-account.ts
+│   └── use-account.test.tsx           # React hook tests
+└── __tests__/
+    ├── setup.ts                       # Global test setup
+    ├── mocks/                         # Mock implementations
+    │   ├── wallet-standard-mock.ts    # Mock wallets
+    │   ├── storage-mock.ts            # Mock storage
+    │   └── window-mock.ts             # Mock browser APIs
+    ├── fixtures/                      # Test data
+    │   ├── wallets.ts                 # Wallet fixtures
+    │   ├── accounts.ts                # Account fixtures
+    │   └── transactions.ts            # Transaction fixtures
+    ├── utils/                         # Test helpers
+    │   ├── test-helpers.ts            # Common utilities
+    │   ├── react-helpers.tsx          # React test utils
+    │   └── wait-for-state.ts          # State helpers
+    └── integration/                   # Integration tests
+        └── connector-flow.test.ts     # Full workflows
+```
+
+### Writing Tests
+
+Example unit test:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { StateManager } from './state-manager';
+
+describe('StateManager', () => {
+    it('should update state correctly', () => {
+        const manager = new StateManager(initialState);
+        manager.updateState({ connected: true });
+        
+        expect(manager.getSnapshot().connected).toBe(true);
+    });
+});
+```
+
+Example React hook test:
+
+```typescript
+import { renderHook } from '@testing-library/react';
+import { useAccount } from './use-account';
+import { createHookWrapper } from '../__tests__/utils/react-helpers';
+
+describe('useAccount', () => {
+    it('should return account information', () => {
+        const { result } = renderHook(() => useAccount(), {
+            wrapper: createHookWrapper(),
+        });
+        
+        expect(result.current.address).toBeDefined();
+    });
+});
+```
+
+### Test Utilities
+
+The package provides comprehensive test utilities:
+
+**Mock Wallets:**
+```typescript
+import { createMockPhantomWallet, createMockSolflareWallet } from '../mocks/wallet-standard-mock';
+
+const wallet = createMockPhantomWallet({
+    connectBehavior: 'success', // or 'error', 'timeout'
+});
+```
+
+**Test Fixtures:**
+```typescript
+import { createTestAccounts, TEST_ADDRESSES } from '../fixtures/accounts';
+import { createTestWallets } from '../fixtures/wallets';
+
+const accounts = createTestAccounts(3);
+const wallets = createTestWallets();
+```
+
+**Test Helpers:**
+```typescript
+import { waitForCondition, createEventCollector } from '../utils/test-helpers';
+
+// Wait for a condition
+await waitForCondition(() => state.connected, { timeout: 5000 });
+
+// Collect events
+const collector = createEventCollector();
+client.on(collector.collect);
+collector.assertEventEmitted('connected');
+```
+
+### Contributing Tests
+
+All new features and bug fixes should include tests:
+
+1. Create test file next to source file with `.test.ts` or `.test.tsx` extension
+2. Follow existing patterns in similar test files
+3. Ensure tests pass locally before submitting
+4. Maintain or improve coverage percentage
+
+For detailed testing guidelines, see [Testing Guide](src/__tests__/README.md).
 
 ---
 
