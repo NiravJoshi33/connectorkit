@@ -74,7 +74,7 @@ export function LegacySolTransfer() {
             client.trackTransaction({
                 signature: createSignature(sig),
                 status: 'pending' as const,
-                method: 'walletAdapter.sendTransaction',
+                method: 'sendTransaction',
                 feePayer: address(walletAdapter.publicKey),
             });
         }

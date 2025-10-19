@@ -107,7 +107,7 @@ export function ModernSolTransfer() {
             client.trackTransaction({
                 signature: transactionSignature,
                 status: 'confirmed',
-                method: '@solana/kit with gill-compatible signer',
+                method: 'signAndSendTransaction',
                 feePayer: senderAddress,
             });
         }

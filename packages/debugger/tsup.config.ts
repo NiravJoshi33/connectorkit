@@ -6,9 +6,7 @@ export default defineConfig({
         react: 'src/react.ts',
     },
     format: ['esm', 'cjs'],
-    dts: {
-        resolve: true,
-    },
+    dts: true,
     sourcemap: true,
     clean: true,
     treeshake: {
