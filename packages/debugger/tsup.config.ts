@@ -19,7 +19,13 @@ export default defineConfig({
     banner: {
         js: '"use client";',
     },
-    external: ['react', 'react-dom', '@connector-kit/connector'],
+    external: [
+        'react',
+        'react-dom',
+        '@connector-kit/connector',
+        '@connector-kit/connector/react',
+        '@connector-kit/connector/headless',
+    ],
     esbuildOptions: options => {
         // Aggressive tree-shaking optimizations
         options.treeShaking = true;

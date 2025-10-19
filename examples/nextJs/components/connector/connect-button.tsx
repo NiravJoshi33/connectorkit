@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@connector-kit/connector/react';
+import { useConnector, useAccount } from '@connector-kit/connector';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
 import { WalletModal } from './wallet-modal';
-import { Wallet, Copy, LogOut, ChevronDown } from 'lucide-react';
+import { Wallet, Copy, LogOut, ChevronDown, Check } from 'lucide-react';
 
 interface ConnectButtonProps {
     className?: string;
@@ -22,13 +22,7 @@ interface ConnectButtonProps {
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { connected, connecting, selectedWallet, selectedAccount, disconnect, wallets } = useConnector();
-
-    const handleCopyAddress = async () => {
-        if (selectedAccount) {
-            await navigator.clipboard.writeText(selectedAccount);
-            // TODO: Add toast notification
-        }
-    };
+    const { copied, copy } = useAccount();
 
     if (connecting) {
         return (
@@ -68,9 +62,18 @@ export function ConnectButton({ className }: ConnectButtonProps) {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleCopyAddress}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy Address
+                    <DropdownMenuItem onClick={copy}>
+                        {copied ? (
+                            <>
+                                <Check className="mr-2 h-4 w-4" />
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy Address
+                            </>
+                        )}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => disconnect()} className="text-red-600">
                         <LogOut className="mr-2 h-4 w-4" />
