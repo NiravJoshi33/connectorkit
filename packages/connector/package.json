@@ -1,69 +1,89 @@
 {
-  "name": "@connector-kit/connector",
-  "version": "0.0.3",
-  "description": "Headless wallet connector client and React provider built on Wallet Standard",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+    "name": "@connector-kit/connector",
+    "version": "0.0.3",
+    "description": "Headless wallet connector client and React provider built on Wallet Standard",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        },
+        "./headless": {
+            "types": "./dist/headless.d.ts",
+            "import": "./dist/headless.mjs",
+            "require": "./dist/headless.js"
+        },
+        "./react": {
+            "types": "./dist/react.d.ts",
+            "import": "./dist/react.mjs",
+            "require": "./dist/react.js"
+        },
+        "./compat": {
+            "types": "./dist/compat.d.ts",
+            "import": "./dist/compat.mjs",
+            "require": "./dist/compat.js"
+        }
     },
-    "./headless": {
-      "types": "./dist/headless.d.ts",
-      "import": "./dist/headless.mjs",
-      "require": "./dist/headless.js"
+    "files": [
+        "dist/**"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:analyze": "npm run build && node scripts/analyze-bundle.js",
+        "dev": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "lint": "prettier --check src/",
+        "clean": "rm -rf dist",
+        "size": "size-limit",
+        "size:why": "size-limit --why",
+        "perf": "npm run build:analyze && npm run size",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui",
+        "test:coverage": "vitest run --coverage"
     },
-    "./react": {
-      "types": "./dist/react.d.ts",
-      "import": "./dist/react.mjs",
-      "require": "./dist/react.js"
+    "peerDependencies": {
+        "@solana/web3.js": "^1.0.0",
+        "react": ">=18.0.0"
     },
-    "./compat": {
-      "types": "./dist/compat.d.ts",
-      "import": "./dist/compat.mjs",
-      "require": "./dist/compat.js"
-    }
-  },
-  "files": [
-    "dist/**"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "build:analyze": "npm run build && node scripts/analyze-bundle.js",
-    "dev": "tsup --watch",
-    "type-check": "tsc --noEmit",
-    "lint": "biome lint src/",
-    "clean": "rm -rf dist",
-    "size": "size-limit",
-    "size:why": "size-limit --why",
-    "perf": "npm run build:analyze && npm run size"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
-  },
-  "dependencies": {
-    "@solana-mobile/wallet-standard-mobile": "^0.3.0",
-    "@solana/webcrypto-ed25519-polyfill": "^3.0.3",
-    "@wallet-standard/app": "^1.0.0",
-    "@wallet-ui/core": "^2.0.0",
-    "nanostores": "^1.0.1",
-    "@nanostores/persistent": "^1.1.0"
-  },
-  "devDependencies": {
-    "@types/react": "^19.0.0",
-    "size-limit": "^11.0.0",
-    "@size-limit/preset-big-lib": "^11.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.3.0"
-  },
-  "license": "MIT"
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "@connector-kit/debugger": {
+            "optional": true
+        },
+        "@solana/web3.js": {
+            "optional": true
+        }
+    },
+    "dependencies": {
+        "@nanostores/persistent": "^1.1.0",
+        "@solana-mobile/wallet-standard-mobile": "^0.4.3",
+        "@solana/webcrypto-ed25519-polyfill": "^4.0.0",
+        "@wallet-standard/app": "^1.1.0",
+        "@wallet-standard/base": "^1.1.0",
+        "@wallet-standard/features": "^1.1.0",
+        "@wallet-ui/core": "^2.0.0",
+        "gill": "^0.12.0"
+    },
+    "devDependencies": {
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.0",
+        "@testing-library/user-event": "^14.6.1",
+        "@types/react": "^19.2.2",
+        "@vitest/coverage-v8": "^3.2.4",
+        "@vitest/ui": "^3.2.4",
+        "happy-dom": "^20.0.7",
+        "react": "19.2.0",
+        "react-dom": "19.2.0",
+        "tsup": "^8.5.0",
+        "typescript": "^5.9.3",
+        "vitest": "^3.2.4"
+    },
+    "license": "MIT"
 }

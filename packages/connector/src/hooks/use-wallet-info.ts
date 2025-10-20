@@ -1,48 +1,61 @@
 /**
  * @connector-kit/connector - useWalletInfo hook
- * 
+ *
  * React hook for getting information about the connected wallet
  */
 
-'use client'
+'use client';
 
-import { useMemo } from 'react'
-import { useConnector } from '../ui/connector-provider'
+import { useMemo } from 'react';
+import { useConnector } from '../ui/connector-provider';
+import type { WalletInfo } from '../types/wallets';
 
+/**
+ * Simplified wallet information for display purposes
+ */
+export interface WalletDisplayInfo {
+    /** Wallet name */
+    name: string;
+    /** Wallet icon/logo URL if available */
+    icon?: string;
+    /** Whether the wallet extension is installed */
+    installed: boolean;
+    /** Whether the wallet supports Solana connections */
+    connectable?: boolean;
+}
+
+/**
+ * Return value from useWalletInfo hook
+ */
 export interface UseWalletInfoReturn {
-  /** Name of the connected wallet (e.g., 'Phantom', 'Solflare') */
-  name: string | null
-  /** Wallet icon/logo URL if available */
-  icon: string | null
-  /** Whether the wallet extension is installed */
-  installed: boolean
-  /** Whether the wallet supports Solana connections */
-  connectable: boolean
-  /** Whether currently connected to the wallet */
-  connected: boolean
-  /** Whether a connection attempt is in progress */
-  connecting: boolean
-  /** All available wallets */
-  wallets: Array<{
-    name: string
-    icon?: string
-    installed: boolean
-    connectable?: boolean
-  }>
+    /** Name of the connected wallet (e.g., 'Phantom', 'Solflare') */
+    name: string | null;
+    /** Wallet icon/logo URL if available */
+    icon: string | null;
+    /** Whether the wallet extension is installed */
+    installed: boolean;
+    /** Whether the wallet supports Solana connections */
+    connectable: boolean;
+    /** Whether currently connected to the wallet */
+    connected: boolean;
+    /** Whether a connection attempt is in progress */
+    connecting: boolean;
+    /** All available wallets */
+    wallets: WalletDisplayInfo[];
 }
 
 /**
  * Hook for getting information about the connected wallet
  * Provides wallet metadata, connection status, and capabilities
- * 
+ *
  * @example
  * ```tsx
  * function WalletBadge() {
  *   const { name, icon, connected, connecting } = useWalletInfo()
- *   
+ *
  *   if (connecting) return <p>Connecting...</p>
  *   if (!connected) return <p>No wallet connected</p>
- *   
+ *
  *   return (
  *     <div>
  *       {icon && <img src={icon} alt={name} />}
@@ -53,48 +66,51 @@ export interface UseWalletInfoReturn {
  * ```
  */
 export function useWalletInfo(): UseWalletInfoReturn {
-  const { selectedWallet, wallets, connected, connecting } = useConnector()
-  
-  // Optimized: Only recreate when wallets array actually changes
-  // Map wallets once to avoid duplication and provide stable reference
-  const mappedWallets = useMemo(
-    () => wallets.map(w => ({
-      name: w.name,
-      icon: w.icon,
-      installed: w.installed,
-      connectable: w.connectable,
-    })),
-    [wallets]
-  )
-  
-  // Optimized: Compute wallet info only when selectedWallet changes
-  // Avoid recomputing on every connecting/connected state change
-  const walletInfo = useMemo(() => {
-    if (!selectedWallet) {
-      return {
-        name: null,
-        icon: null,
-        installed: false,
-        connectable: false,
-      }
-    }
-    
-    const info = wallets.find(w => w.name === selectedWallet.name)
-    
-    return {
-      name: selectedWallet.name,
-      icon: selectedWallet.icon ?? null,
-      installed: info?.installed ?? false,
-      connectable: info?.connectable ?? false,
-    }
-  }, [selectedWallet, wallets])
-  
-  // Return stable object with minimal dependencies
-  return useMemo(() => ({
-    ...walletInfo,
-    connected,
-    connecting,
-    wallets: mappedWallets,
-  }), [walletInfo, connected, connecting, mappedWallets])
-}
+    const { selectedWallet, wallets, connected, connecting } = useConnector();
 
+    // Map WalletInfo[] to WalletDisplayInfo[] for simplified consumption
+    const mappedWallets = useMemo<WalletDisplayInfo[]>(
+        () =>
+            wallets.map(
+                (walletInfo: WalletInfo): WalletDisplayInfo => ({
+                    name: walletInfo.wallet.name,
+                    icon: walletInfo.wallet.icon,
+                    installed: walletInfo.installed,
+                    connectable: walletInfo.connectable,
+                }),
+            ),
+        [wallets],
+    );
+
+    // Extract information about the currently selected wallet
+    const selectedWalletInfo = useMemo(() => {
+        if (!selectedWallet) {
+            return {
+                name: null,
+                icon: null,
+                installed: false,
+                connectable: false,
+            };
+        }
+
+        // Find the WalletInfo for the selected wallet
+        const walletInfo = wallets.find((w: WalletInfo) => w.wallet.name === selectedWallet.name);
+
+        return {
+            name: selectedWallet.name,
+            icon: selectedWallet.icon ?? null,
+            installed: walletInfo?.installed ?? false,
+            connectable: walletInfo?.connectable ?? false,
+        };
+    }, [selectedWallet, wallets]);
+
+    return useMemo(
+        () => ({
+            ...selectedWalletInfo,
+            connected,
+            connecting,
+            wallets: mappedWallets,
+        }),
+        [selectedWalletInfo, connected, connecting, mappedWallets],
+    );
+}
