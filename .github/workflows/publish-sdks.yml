@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_packages:
-        description: 'Publish @connector-kit/connector package to npm'
+        description: 'Publish @solana/connector and @solana/connector-debugger packages to npm'
         type: boolean
         default: true
 
@@ -52,8 +52,14 @@ jobs:
       - name: Run tests (skip for now)
         run: echo "Skipping tests for initial publish"
 
-      - name: Publish @connector-kit/connector
+      - name: Publish @solana/connector
         working-directory: packages/connector
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @solana/connector-debugger
+        working-directory: packages/debugger
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -75,17 +81,23 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
-            ## ConnectorKit Packages Published
+            ## Solana Connector Packages Published
 
-            ### @connector-kit/connector
-            - Package: `@connector-kit/connector`
+            ### @solana/connector
+            - Package: `@solana/connector`
+            - Version: ${{ github.ref_name }}
+            - Registry: npm
+
+            ### @solana/connector-debugger
+            - Package: `@solana/connector-debugger`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
             ## Installation
 
             ```bash
-            npm install @connector-kit/connector@${{ github.ref_name }}
+            npm install @solana/connector@${{ github.ref_name }}
+            npm install @solana/connector-debugger@${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
