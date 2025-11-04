@@ -150,14 +150,14 @@ export class AutoConnector {
 
             if (directWallet.signTransaction) {
                 const signTransactionFn = directWallet.signTransaction;
-                features['standard:signTransaction'] = {
+                features['solana:signTransaction'] = {
                     signTransaction: (tx: unknown) => signTransactionFn.call(directWallet, tx),
                 };
             }
 
             if (directWallet.signMessage) {
                 const signMessageFn = directWallet.signMessage;
-                features['standard:signMessage'] = {
+                features['solana:signMessage'] = {
                     signMessage: (...args: unknown[]) => {
                         const msg = args[0] as Uint8Array;
                         return signMessageFn.call(directWallet, msg);
