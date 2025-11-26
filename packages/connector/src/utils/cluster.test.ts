@@ -16,8 +16,8 @@ import {
 } from './cluster';
 import type { SolanaCluster } from '@wallet-ui/core';
 
-// Mock gill
-vi.mock('gill', () => ({
+// Mock kit-utils
+vi.mock('../lib/kit-utils', () => ({
     getExplorerLink: vi.fn(({ transaction, address, cluster }) => {
         const clusterParam = cluster === 'mainnet' ? '' : `?cluster=${cluster}`;
         if (transaction) return `https://explorer.solana.com/tx/${transaction}${clusterParam}`;
@@ -29,7 +29,11 @@ vi.mock('gill', () => ({
 describe('Cluster Utilities', () => {
     const mockClusters: Record<string, SolanaCluster> = {
         mainnet: { id: 'solana:mainnet', label: 'Mainnet', url: 'https://api.mainnet.solana.com' } as SolanaCluster,
-        mainnetBeta: { id: 'solana:mainnet-beta', label: 'Mainnet Beta', url: 'https://api.mainnet-beta.solana.com' } as SolanaCluster,
+        mainnetBeta: {
+            id: 'solana:mainnet-beta',
+            label: 'Mainnet Beta',
+            url: 'https://api.mainnet-beta.solana.com',
+        } as SolanaCluster,
         devnet: { id: 'solana:devnet', label: 'Devnet', url: 'https://api.devnet.solana.com' } as SolanaCluster,
         testnet: { id: 'solana:testnet', label: 'Testnet', url: 'https://api.testnet.solana.com' } as SolanaCluster,
         localnet: { id: 'solana:localnet', label: 'Localnet', url: 'http://localhost:8899' } as SolanaCluster,

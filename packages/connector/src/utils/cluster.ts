@@ -5,7 +5,7 @@
  */
 
 import type { SolanaCluster } from '@wallet-ui/core';
-import { getExplorerLink } from 'gill';
+import { getExplorerLink } from '../lib/kit-utils';
 import { PUBLIC_RPC_ENDPOINTS } from './network';
 
 /**
@@ -57,7 +57,9 @@ export function getClusterExplorerUrl(cluster: SolanaCluster, path?: string): st
     const base = isMainnet ? 'https://explorer.solana.com' : `https://explorer.solana.com?cluster=${clusterSegment}`;
 
     if (path) {
-        return isMainnet ? `https://explorer.solana.com/${path}` : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
+        return isMainnet
+            ? `https://explorer.solana.com/${path}`
+            : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
     }
 
     return base;
