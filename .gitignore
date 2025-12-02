@@ -38,25 +38,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # cursor
 .cursor
 
-# Reference projects (local development only)
-/ai-main/
-/gill-master/
-/kit-main/
-/kite-main/
-/solana-docs/
-/wallet-standard-master/
-/viem-main/
-/wagmi-main/
-/mosaic-main/
-/mobile-wallet-adapter-main/
-/connectkit-main/
-/wallet-ui-main/
-/commerce-kit/
-/wallet-adapter-compat/
-/armadura/
-/explorer-master/
-/solana-transaction-optimizer-main/
-**/local/
-/hermis-main/
-/web/
-/web copy/
+# References
+/references/
