@@ -7,6 +7,7 @@ import type { SolanaCluster } from '@wallet-ui/core';
 import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
+import { useConnectorClient } from '../ui/connector-provider';
 import { getTransactionUrl } from '../utils/cluster';
 import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
 
@@ -466,7 +467,16 @@ function formatAmount(
 const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
 
 /**
- * Fetch token metadata from Jupiter for transaction display
+ * Transform an image URL through a proxy if configured
+ */
+function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
+    if (!url) return undefined;
+    if (!imageProxy) return url;
+    return `${imageProxy}${encodeURIComponent(url)}`;
+}
+
+/**
+ * Fetch token metadata from Solana Token List API for transaction display
  */
 async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol: string; icon: string }>> {
     const results = new Map<string, { symbol: string; icon: string }>();
@@ -486,21 +496,21 @@ async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol
     if (uncachedMints.length === 0) return results;
 
     try {
-        const url = new URL('https://lite-api.jup.ag/tokens/v2/search');
-        url.searchParams.append('query', uncachedMints.join(','));
-
-        const response = await fetch(url.toString(), {
+        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addresses: uncachedMints }),
             signal: AbortSignal.timeout(5000),
         });
 
         if (!response.ok) return results;
 
-        const items: Array<{ id: string; symbol: string; icon: string }> = await response.json();
+        const data: { content: Array<{ address: string; symbol: string; logoURI: string }> } = await response.json();
 
-        for (const item of items) {
-            const metadata = { symbol: item.symbol, icon: item.icon };
-            results.set(item.id, metadata);
-            tokenMetadataCache.set(item.id, metadata);
+        for (const item of data.content) {
+            const metadata = { symbol: item.symbol, icon: item.logoURI };
+            results.set(item.address, metadata);
+            tokenMetadataCache.set(item.address, metadata);
         }
     } catch (error) {
         console.warn('[useTransactions] Failed to fetch token metadata:', error);
@@ -538,6 +548,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     const { address, connected } = useAccount();
     const { cluster } = useCluster();
     const client = useSolanaClient();
+    const connectorClient = useConnectorClient();
 
     const [transactions, setTransactions] = useState<TransactionInfo[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -551,6 +562,8 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
 
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
+    // Get imageProxy from connector config
+    const imageProxy = connectorClient?.getConfig().imageProxy;
 
     const parseTransaction = useCallback(
         (
@@ -569,7 +582,11 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 blockTime,
                 slot,
                 status: err ? 'failed' : 'success',
-                error: err ? JSON.stringify(err) : undefined,
+                error: err
+                    ? JSON.stringify(err, (_key, value) =>
+                          typeof value === 'bigint' ? value.toString() : value,
+                      )
+                    : undefined,
                 type: 'unknown',
                 formattedDate: date,
                 formattedTime: time,
@@ -777,7 +794,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                                 return {
                                     ...tx,
                                     tokenSymbol: meta.symbol,
-                                    tokenIcon: meta.icon,
+                                    tokenIcon: transformImageUrl(meta.icon, imageProxy),
                                     // Update formatted amount with symbol
                                     formattedAmount: tx.formattedAmount
                                         ? `${tx.formattedAmount} ${meta.symbol}`
@@ -816,7 +833,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 setIsLoading(false);
             }
         },
-        [connected, address, rpcClient, cluster, limit, fetchDetails, parseTransaction],
+        [connected, address, rpcClient, cluster, limit, fetchDetails, parseTransaction, imageProxy],
     );
 
     const refetch = useCallback(async () => {

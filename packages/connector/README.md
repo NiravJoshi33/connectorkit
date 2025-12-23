@@ -608,6 +608,242 @@ const mobile = getDefaultMobileConfig({
 
 ---
 
+## Security Considerations
+
+### Token Image Privacy
+
+When using `useTokens()` or `useTransactions()`, token metadata (including logo URLs) is fetched from external APIs. By default, these image URLs are returned directly, which means when your users' browsers fetch these images, the image host can see:
+
+- User IP addresses
+- Request timing (when users viewed their tokens)
+- User agent and browser information
+
+This could potentially be exploited by malicious token creators who set tracking URLs in their token metadata.
+
+### Image Proxy Configuration
+
+To protect user privacy, you can configure an image proxy that fetches images on behalf of your users:
+
+```typescript
+const config = getDefaultConfig({
+    appName: 'My App',
+    imageProxy: '/_next/image?w=64&q=75&url=', // Next.js Image Optimization
+});
+```
+
+When `imageProxy` is set, all token image URLs returned by `useTokens()` and `useTransactions()` will be automatically transformed:
+
+```
+// Original URL from token metadata
+https://raw.githubusercontent.com/.../token-logo.png
+
+// Transformed URL (when imageProxy is set)
+/_next/image?w=64&q=75&url=https%3A%2F%2Fraw.githubusercontent.com%2F...%2Ftoken-logo.png
+```
+
+### Common Proxy Options
+
+| Service | Configuration |
+|---------|---------------|
+| **Next.js Image** | `imageProxy: '/_next/image?w=64&q=75&url='` |
+| **Cloudflare** | `imageProxy: '/cdn-cgi/image/width=64,quality=75/'` |
+| **imgproxy** | `imageProxy: 'https://imgproxy.example.com/insecure/fill/64/64/'` |
+| **Custom API** | `imageProxy: '/api/image-proxy?url='` |
+
+### Custom Proxy API Route (Next.js Example)
+
+```typescript
+// app/api/image-proxy/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import dns from 'dns/promises';
+
+// Allowlist of permitted domains for image fetching
+const ALLOWED_DOMAINS = [
+    'raw.githubusercontent.com',
+    'arweave.net',
+    'ipfs.io',
+    'cloudflare-ipfs.com',
+    'nftstorage.link',
+    // Add other trusted image domains as needed
+];
+
+// Check if an IP address falls within private/reserved ranges
+function isPrivateOrReservedIP(ip: string): boolean {
+    // IPv4 private/reserved ranges
+    const ipv4PrivateRanges = [
+        /^127\./, // 127.0.0.0/8 (loopback)
+        /^10\./, // 10.0.0.0/8 (private)
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12 (private)
+        /^192\.168\./, // 192.168.0.0/16 (private)
+        /^169\.254\./, // 169.254.0.0/16 (link-local/metadata)
+        /^0\./, // 0.0.0.0/8 (current network)
+        /^100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\./, // 100.64.0.0/10 (CGNAT)
+        /^192\.0\.0\./, // 192.0.0.0/24 (IETF protocol assignments)
+        /^192\.0\.2\./, // 192.0.2.0/24 (TEST-NET-1)
+        /^198\.51\.100\./, // 198.51.100.0/24 (TEST-NET-2)
+        /^203\.0\.113\./, // 203.0.113.0/24 (TEST-NET-3)
+        /^224\./, // 224.0.0.0/4 (multicast)
+        /^240\./, // 240.0.0.0/4 (reserved)
+        /^255\.255\.255\.255$/, // broadcast
+    ];
+
+    // IPv6 private/reserved ranges
+    const ipv6PrivatePatterns = [
+        /^::1$/, // loopback
+        /^fe80:/i, // link-local
+        /^fc00:/i, // unique local (fc00::/7)
+        /^fd/i, // unique local (fd00::/8)
+        /^::ffff:(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.)/i, // IPv4-mapped
+    ];
+
+    // Check IPv4
+    for (const range of ipv4PrivateRanges) {
+        if (range.test(ip)) return true;
+    }
+
+    // Check IPv6
+    for (const pattern of ipv6PrivatePatterns) {
+        if (pattern.test(ip)) return true;
+    }
+
+    return false;
+}
+
+// Validate and parse the URL
+function validateUrl(urlString: string): URL | null {
+    try {
+        const parsed = new URL(urlString);
+        // Only allow http and https protocols
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return null;
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+// Check if hostname is in the allowlist
+function isAllowedDomain(hostname: string): boolean {
+    return ALLOWED_DOMAINS.some(
+        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+}
+
+export async function GET(request: NextRequest) {
+    const urlParam = request.nextUrl.searchParams.get('url');
+    
+    // (1) Ensure URL exists and parses correctly with http/https
+    if (!urlParam) {
+        return new NextResponse('Missing URL parameter', { status: 400 });
+    }
+
+    const parsedUrl = validateUrl(urlParam);
+    if (!parsedUrl) {
+        return new NextResponse('Invalid URL or protocol', { status: 400 });
+    }
+
+    // (2) Enforce allowlist of permitted domains
+    if (!isAllowedDomain(parsedUrl.hostname)) {
+        return new NextResponse('Domain not allowed', { status: 403 });
+    }
+
+    // (3) Resolve hostname and check for private/reserved IPs
+    try {
+        const addresses = await dns.resolve(parsedUrl.hostname);
+        for (const ip of addresses) {
+            if (isPrivateOrReservedIP(ip)) {
+                return new NextResponse('Resolved IP is not allowed', { status: 403 });
+            }
+        }
+    } catch {
+        return new NextResponse('Failed to resolve hostname', { status: 400 });
+    }
+
+    // (4) All checks passed - perform the fetch
+    try {
+        const response = await fetch(parsedUrl.toString());
+        const buffer = await response.arrayBuffer();
+        
+        return new NextResponse(buffer, {
+            headers: {
+                'Content-Type': response.headers.get('Content-Type') || 'image/png',
+                'Cache-Control': 'public, max-age=86400',
+            },
+        });
+    } catch {
+        return new NextResponse('Failed to fetch image', { status: 500 });
+    }
+}
+```
+
+---
+
+## CoinGecko API & Rate Limits
+
+The `useTokens()` hook fetches token prices from CoinGecko. CoinGecko has rate limits that may affect your application:
+
+### Rate Limits (as of 2024)
+
+| Tier | Rate Limit | API Key Required |
+|------|------------|------------------|
+| **Free (Public)** | 10-30 requests/minute | No |
+| **Demo** | 30 requests/minute | Yes (free) |
+| **Analyst** | 500 requests/minute | Yes (paid) |
+| **Pro** | 1000+ requests/minute | Yes (paid) |
+
+### Handling Rate Limits
+
+ConnectorKit automatically handles rate limits with:
+- **Exponential backoff**: Retries with increasing delays
+- **Jitter**: Random delay added to prevent thundering herd
+- **Retry-After header**: Honors server-specified wait times
+- **Bounded timeout**: Won't block forever (default 30s max)
+
+### Adding a CoinGecko API Key
+
+For higher rate limits, add a free Demo API key from [CoinGecko](https://www.coingecko.com/en/api/pricing):
+
+```typescript
+const config = getDefaultConfig({
+    appName: 'My App',
+    coingecko: {
+        apiKey: process.env.COINGECKO_API_KEY, // Demo or Pro API key
+        isPro: false, // Set to true for Pro API keys
+    },
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const config = getDefaultConfig({
+    appName: 'My App',
+    coingecko: {
+        // API key for higher rate limits (optional)
+        apiKey: process.env.COINGECKO_API_KEY,
+        
+        // Set to true if using a Pro API key (default: false for Demo keys)
+        isPro: false,
+        
+        // Maximum retry attempts on 429 (default: 3)
+        maxRetries: 3,
+        
+        // Base delay for exponential backoff in ms (default: 1000)
+        baseDelay: 1000,
+        
+        // Maximum total timeout in ms (default: 30000)
+        maxTimeout: 30000,
+    },
+});
+```
+
+### Caching
+
+Token prices are cached for 60 seconds to minimize API calls. The retry logic only applies to uncached token IDs, so frequently-viewed tokens won't trigger additional API calls.
+
+---
+
 ## Advanced Usage
 
 ### Headless Client (Vue, Svelte, Vanilla JS)
