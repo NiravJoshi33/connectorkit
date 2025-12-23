@@ -3,7 +3,6 @@
 import { useConnector, useBalance, useCluster, useTokens, useTransactions } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
@@ -234,30 +233,37 @@ function UseClusterExample() {
 
             {/* Right: Combined Component */}
             <div className="flex-1 flex flex-col justify-center">
-                <div className="p-4 rounded-lg border bg-card space-y-3">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Current Network</span>
-                        <Badge variant={isMainnet ? 'default' : 'secondary'}>
+                <div className="p-4 rounded-xl border bg-card space-y-3">
+                    {/* Current cluster indicator */}
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <span className="relative flex h-2.5 w-2.5">
                             <span
-                                className={`h-2 w-2 rounded-full mr-1.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
+                                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
                             />
-                            {cluster?.label}
-                        </Badge>
+                            <span
+                                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
+                            />
+                        </span>
+                        <span className="text-sm font-medium">{cluster?.label}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+
+                    {/* Cluster buttons */}
+                    <div className="flex flex-col gap-1.5">
                         {clusters.map(c => (
-                            <Button
+                            <button
                                 key={c.id}
-                                size="sm"
-                                variant={cluster?.id === c.id ? 'default' : 'outline'}
                                 onClick={() => setCluster(c.id)}
-                                className="text-xs"
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                                    cluster?.id === c.id
+                                        ? 'bg-sand-100 text-primary-foreground text-sand-1500'
+                                        : 'hover:bg-sand-200 text-sand-700'
+                                }`}
                             >
                                 <span
-                                    className={`h-1.5 w-1.5 rounded-full mr-1.5 ${clusterColors[c.id] || 'bg-purple-500'}`}
+                                    className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`}
                                 />
                                 {c.label}
-                            </Button>
+                            </button>
                         ))}
                     </div>
                 </div>
