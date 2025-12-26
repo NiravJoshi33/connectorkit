@@ -233,7 +233,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     <div className="rounded-[12px] border p-4">
                         <div className="flex justify-between">
                             <span>Balance</span>
-                            <button onClick={refetch}><RefreshCw className={isLoading ? 'animate-spin' : ''} /></button>
+                            <button onClick={() => refetch()}><RefreshCw className={isLoading ? 'animate-spin' : ''} /></button>
                         </div>
                         <div className="text-2xl font-bold">{solBalance?.toFixed(4)} SOL</div>
                     </div>
@@ -478,7 +478,7 @@ export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walle
                     <div className="rounded-[12px] border bg-muted/50 p-4">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-sm text-muted-foreground">Balance</span>
-                            <button onClick={refetch} className="p-1 hover:bg-accent rounded">
+                            <button onClick={() => refetch()} className="p-1 hover:bg-accent rounded">
                                 <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
                             </button>
                         </div>
@@ -794,12 +794,27 @@ function WalletModalContentBaseUI() {
     };
 
     // Custom Avatar for Base UI
-    const BaseUIAvatar = ({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) => {
+    const BaseUIAvatar = ({
+        src,
+        alt,
+        fallback,
+        className,
+    }: {
+        src?: string;
+        alt?: string;
+        fallback?: React.ReactNode;
+        className?: string;
+    }) => {
         const [hasError, setHasError] = useState(false);
         return (
             <div className={`relative flex shrink-0 overflow-hidden rounded-full ${className}`}>
                 {src && !hasError ? (
-                    <img src={src} alt={alt} className="aspect-square h-full w-full object-cover" onError={() => setHasError(true)} />
+                    <img
+                        src={src}
+                        alt={alt}
+                        className="aspect-square h-full w-full object-cover"
+                        onError={() => setHasError(true)}
+                    />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
                 )}
@@ -899,7 +914,12 @@ function WalletModalContentBaseUI() {
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
                                         >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                            />
                                         </svg>
                                     </button>
                                     {isOtherWalletsOpen && (
@@ -1150,12 +1170,14 @@ export function FeaturedSection() {
                 </div>
                 <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Component Examples</h2>
                 <p className="text-body-lg font-inter text-sand-900 max-w-md">
-                    Complete components built with ConnectorKit's Elements based on Radix UI and Base UI.
+                    Complete components built with ConnectorKit&apos;s Elements based on Radix UI and Base UI.
                 </p>
 
                 {/* Supported UI Frameworks */}
                 <div className="mt-6">
-                    <p className="text-xs font-diatype-medium font-medium text-sand-700 mb-3">Supported UI Frameworks</p>
+                    <p className="text-xs font-diatype-medium font-medium text-sand-700 mb-3">
+                        Supported UI Frameworks
+                    </p>
                     <div className="flex items-center gap-4">
                         {/* Base UI */}
                         <div className="flex items-center gap-2">

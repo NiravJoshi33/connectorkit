@@ -19,6 +19,58 @@ function HookReturnValue({ name, value }: { name: string; value: string }) {
     );
 }
 
+// Component for displaying overlapping swap token icons
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
+    const offset = size * 0.6; // 60% offset for overlap
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
+            {/* From token (back) */}
+            <div
+                className="absolute left-0 top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ width: size, height: size }}
+            >
+                {fromIcon ? (
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+            {/* To token (front, overlapping) */}
+            <div
+                className="absolute top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ left: offset, width: size, height: size }}
+            >
+                {toIcon ? (
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function shortId(id: string) {
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+}
+
+function getTransactionTitle(tx: { type: string; programName?: string; programId?: string }) {
+    if (tx.type === 'tokenAccountClosed') return 'Token Account Closed';
+    if (tx.type === 'program') {
+        const program = tx.programName ?? (tx.programId ? shortId(tx.programId) : 'Unknown');
+        return `Program: ${program}`;
+    }
+    return tx.type;
+}
+
+function getTransactionSubtitle(tx: { type: string; formattedTime: string; instructionTypes?: string[] }) {
+    if (tx.type === 'program' && tx.instructionTypes?.length) {
+        const summary = tx.instructionTypes.slice(0, 2).join(' · ');
+        return `${tx.formattedTime} · ${summary}`;
+    }
+    return tx.formattedTime;
+}
+
 // Hook example components
 function UseConnectorExample() {
     const { connected, connecting, selectedWallet, selectedAccount, wallets, select, disconnect } = useConnector();
@@ -174,7 +226,7 @@ function UseBalanceExample() {
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">SOL Balance</span>
-                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -259,9 +311,7 @@ function UseClusterExample() {
                                         : 'hover:bg-sand-200 text-sand-700'
                                 }`}
                             >
-                                <span
-                                    className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`}
-                                />
+                                <span className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`} />
                                 {c.label}
                             </button>
                         ))}
@@ -273,7 +323,7 @@ function UseClusterExample() {
 }
 
 function UseTokensExample() {
-    const { tokens, isLoading, refetch } = useTokens();
+    const { tokens, isLoading, error, refetch, abort, lastUpdated, totalAccounts } = useTokens();
     const displayTokens = tokens.slice(0, 3);
     const sampleToken = tokens[0];
 
@@ -289,17 +339,20 @@ function UseTokensExample() {
                     <div className="space-y-0.5">
                         <HookReturnValue name="tokens" value={`[${tokens.length} items]`} />
                         <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="error" value={error?.message ?? 'null'} />
                         <HookReturnValue name="refetch" value="fn()" />
-                        <HookReturnValue name="hasMore" value="boolean" />
-                        <HookReturnValue name="loadMore" value="fn()" />
+                        <HookReturnValue name="abort" value="fn()" />
+                        <HookReturnValue
+                            name="lastUpdated"
+                            value={lastUpdated ? lastUpdated.toLocaleTimeString() : 'null'}
+                        />
+                        <HookReturnValue name="totalAccounts" value={String(totalAccounts)} />
                     </div>
 
                     {/* Sample token item breakdown */}
                     {sampleToken && (
                         <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
-                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                tokens properties:
-                            </span>
+                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">tokens properties:</span>
                             <div className="grid grid-cols-2 gap-1.5">
                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
                                     <span className="text-[9px] font-mono text-muted-foreground uppercase">logo</span>
@@ -350,7 +403,7 @@ function UseTokensExample() {
                 <div className="rounded-lg border bg-card">
                     <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Tokens</span>
-                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -393,7 +446,11 @@ function UseTokensExample() {
 }
 
 function UseTransactionsExample() {
-    const { transactions, isLoading, hasMore, loadMore } = useTransactions({ limit: 3 });
+    const { transactions, isLoading, error, hasMore, loadMore, refetch, abort, lastUpdated } = useTransactions({
+        limit: 10,
+        // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+        detailsConcurrency: 4,
+    });
     const sampleTx = transactions[0];
 
     return (
@@ -408,8 +465,15 @@ function UseTransactionsExample() {
                     <div className="space-y-0.5">
                         <HookReturnValue name="transactions" value={`[${transactions.length} items]`} />
                         <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="error" value={error?.message ?? 'null'} />
                         <HookReturnValue name="hasMore" value={String(hasMore)} />
                         <HookReturnValue name="loadMore" value="fn()" />
+                        <HookReturnValue name="refetch" value="fn()" />
+                        <HookReturnValue name="abort" value="fn()" />
+                        <HookReturnValue
+                            name="lastUpdated"
+                            value={lastUpdated ? lastUpdated.toLocaleTimeString() : 'null'}
+                        />
                     </div>
 
                     {/* Sample transaction item breakdown */}
@@ -507,7 +571,13 @@ function UseTransactionsExample() {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
                                 >
-                                    {tx.tokenIcon ? (
+                                    {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                        <SwapTokenIcon
+                                            fromIcon={tx.swapFromToken?.icon}
+                                            toIcon={tx.swapToToken?.icon}
+                                            size={32}
+                                        />
+                                    ) : tx.tokenIcon ? (
                                         <img src={tx.tokenIcon} className="h-8 w-8 rounded-full" alt="" />
                                     ) : (
                                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -515,8 +585,8 @@ function UseTransactionsExample() {
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm">{tx.type}</p>
-                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                        <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                        <p className="text-xs text-muted-foreground">{getTransactionSubtitle(tx)}</p>
                                     </div>
                                     {tx.formattedAmount && (
                                         <span
@@ -594,7 +664,7 @@ function BalanceDisplay() {
     return (
         <div>
             <span>Balance: {solBalance?.toFixed(4) ?? '--'} SOL</span>
-            <button onClick={refetch} disabled={isLoading}>
+            <button onClick={() => refetch()} disabled={isLoading}>
                 {isLoading ? 'Loading...' : 'Refresh'}
             </button>
         </div>
@@ -640,25 +710,29 @@ function NetworkSelector() {
     {
         id: 'use-tokens',
         name: 'useTokens',
-        description: 'Fetch token holdings with metadata from Jupiter API. Supports pagination and refresh.',
+        description:
+            'Fetch token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes caching + refresh.',
         code: `import { useTokens } from '@solana/connector';
 
 function TokenList() {
-    const { tokens, isLoading, refetch, hasMore, loadMore } = useTokens({ 
-        limit: 10 
+    const { tokens, isLoading, error, refetch, totalAccounts } = useTokens({
+        includeNativeSol: true,
+        fetchMetadata: true,
     });
 
     if (isLoading) return <div>Loading tokens...</div>;
+    if (error) return <div>Failed to load tokens</div>;
 
     return (
         <div>
             {tokens.map(token => (
                 <div key={token.mint}>
-                    <img src={token.logo} alt={token.symbol} />
-                    <span>{token.symbol}: {token.formatted}</span>
+                    {token.logo && <img src={token.logo} alt={token.symbol ?? 'Token'} />}
+                    <span>{token.symbol ?? token.mint}: {token.formatted}</span>
                 </div>
             ))}
-            {hasMore && <button onClick={loadMore}>Load More</button>}
+            <button onClick={() => refetch()}>Refresh</button>
+            <div>Total token accounts: {totalAccounts}</div>
         </div>
     );
 }`,
@@ -676,8 +750,14 @@ function TransactionHistory() {
         transactions, 
         isLoading, 
         hasMore, 
-        loadMore 
-    } = useTransactions({ limit: 10 });
+        loadMore,
+        refetch
+    } = useTransactions({ 
+        limit: 10,
+        // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+        detailsConcurrency: 4,
+        fetchDetails: true,
+    });
 
     if (isLoading) return <div>Loading...</div>;
 
@@ -691,6 +771,7 @@ function TransactionHistory() {
                 </a>
             ))}
             {hasMore && <button onClick={loadMore}>Load More</button>}
+            <button onClick={() => refetch()}>Refresh</button>
         </div>
     );
 }`,

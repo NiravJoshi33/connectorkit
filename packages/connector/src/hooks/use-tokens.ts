@@ -1,37 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { address as toAddress } from '@solana/addresses';
+import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { useAccount } from './use-account';
-import { useSolanaClient } from './use-kit-solana-client';
+import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
+import { createTimeoutSignal } from '../utils/abort';
+import { transformImageUrl } from '../utils/image';
+import { formatBigIntBalance, formatBigIntUsd } from '../utils/formatting';
+import {
+    useWalletAssets,
+    NATIVE_SOL_MINT,
+    type WalletAssetsData,
+    type TokenAccountInfo,
+} from './_internal/use-wallet-assets';
+import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import type { CoinGeckoConfig } from '../types/connector';
-
-/**
- * Creates a timeout signal with browser compatibility fallback.
- *
- * Uses `AbortSignal.timeout()` if available (modern browsers),
- * otherwise falls back to manual AbortController + setTimeout.
- *
- * @param ms - Timeout in milliseconds
- * @returns Object with `signal` for fetch and `cleanup` function to clear the timer
- */
-function createTimeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => void } {
-    // Feature detect AbortSignal.timeout (available in modern browsers)
-    if (typeof AbortSignal.timeout === 'function') {
-        // No cleanup needed for native timeout signals
-        return { signal: AbortSignal.timeout(ms), cleanup: () => {} };
-    }
-
-    // Fallback for older browsers: manual AbortController + setTimeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), ms);
-
-    return {
-        signal: controller.signal,
-        cleanup: () => clearTimeout(timeoutId),
-    };
-}
+import type { SolanaClient } from '../lib/kit-utils';
+import type { ClusterType } from '../utils/cluster';
 
 export interface Token {
     /** Token mint address */
@@ -58,9 +43,13 @@ export interface Token {
     isFrozen: boolean;
     /** Owner address */
     owner: string;
+    /** Which token program (token or token-2022) */
+    programId?: 'token' | 'token-2022';
 }
 
 export interface UseTokensOptions {
+    /** Whether the hook is enabled (default: true) */
+    enabled?: boolean;
     /** Whether to include zero balance tokens */
     includeZeroBalance?: boolean;
     /** Whether to auto-refresh */
@@ -71,6 +60,14 @@ export interface UseTokensOptions {
     fetchMetadata?: boolean;
     /** Include native SOL balance */
     includeNativeSol?: boolean;
+    /** Time in ms to consider data fresh (default: 0) */
+    staleTimeMs?: number;
+    /** Time in ms to keep cache after unmount (default: 300000) */
+    cacheTimeMs?: number;
+    /** Whether to refetch on mount (default: 'stale') */
+    refetchOnMount?: boolean | 'stale';
+    /** Override the Solana client from provider */
+    client?: SolanaClient | null;
 }
 
 export interface UseTokensReturn {
@@ -80,24 +77,14 @@ export interface UseTokensReturn {
     isLoading: boolean;
     /** Error if fetch failed */
     error: Error | null;
-    /** Refetch tokens */
-    refetch: () => Promise<void>;
+    /** Refetch tokens, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<void>;
+    /** Abort any in-flight token fetch */
+    abort: () => void;
     /** Last updated timestamp */
     lastUpdated: Date | null;
     /** Total number of token accounts */
     totalAccounts: number;
-}
-
-// Solana Token List API response
-interface SolanaTokenMetadata {
-    address: string;
-    name: string;
-    symbol: string;
-    decimals: number;
-    logoURI: string;
-    extensions?: {
-        coingeckoId?: string;
-    };
 }
 
 // Combined token metadata (Solana Token List + CoinGecko price)
@@ -111,9 +98,6 @@ interface TokenMetadata {
     usdPrice?: number;
 }
 
-// Native SOL mint address
-const NATIVE_MINT = 'So11111111111111111111111111111111111111112';
-
 // Cache configuration
 const CACHE_MAX_SIZE = 500;
 const PRICE_CACHE_TTL = 60000; // 60 seconds
@@ -121,24 +105,14 @@ const STALE_CLEANUP_INTERVAL = 120000; // 2 minutes
 
 /**
  * CoinGecko API defaults
- *
- * Rate Limits (as of 2024):
- * - Free tier (no API key): 10-30 requests/minute
- * - Demo tier (free API key): 30 requests/minute
- * - Paid tiers: Higher limits based on plan
- *
- * @see https://docs.coingecko.com/reference/introduction
  */
 const COINGECKO_DEFAULT_MAX_RETRIES = 3;
-const COINGECKO_DEFAULT_BASE_DELAY = 1000; // 1 second
-const COINGECKO_DEFAULT_MAX_TIMEOUT = 30000; // 30 seconds
+const COINGECKO_DEFAULT_BASE_DELAY = 1000;
+const COINGECKO_DEFAULT_MAX_TIMEOUT = 30000;
 const COINGECKO_API_BASE_URL = 'https://api.coingecko.com/api/v3';
 
 /**
  * LRU Cache with optional TTL support.
- * - Moves accessed items to most-recent position on get
- * - Evicts oldest entries when max size is reached
- * - Optionally prunes stale entries based on TTL
  */
 class LRUCache<K, V> {
     private cache = new Map<K, V>();
@@ -162,7 +136,6 @@ class LRUCache<K, V> {
         const value = this.cache.get(key);
         if (value === undefined) return undefined;
 
-        // Check if entry is stale (for TTL-enabled caches)
         if (this.getTtl && this.getTimestamp) {
             const ttl = this.getTtl(value);
             const timestamp = this.getTimestamp(value);
@@ -174,19 +147,16 @@ class LRUCache<K, V> {
             }
         }
 
-        // Move to most-recent position (delete and re-add)
         this.cache.delete(key);
         this.cache.set(key, value);
         return value;
     }
 
     set(key: K, value: V): void {
-        // If key exists, delete it first to update position
         if (this.cache.has(key)) {
             this.cache.delete(key);
         }
 
-        // Evict oldest entry if at max size
         if (this.cache.size >= this.maxSize) {
             const oldestKey = this.cache.keys().next().value;
             if (oldestKey !== undefined) {
@@ -213,10 +183,6 @@ class LRUCache<K, V> {
         return this.cache.size;
     }
 
-    /**
-     * Prune stale entries based on TTL.
-     * Only works if getTtl and getTimestamp are provided.
-     */
     pruneStale(): number {
         if (!this.getTtl || !this.getTimestamp) return 0;
 
@@ -244,7 +210,7 @@ const metadataCache = new LRUCache<string, TokenMetadata>(CACHE_MAX_SIZE);
 // Price cache with TTL (LRU + TTL - prices change frequently)
 const priceCache = new LRUCache<string, { price: number; timestamp: number }>(CACHE_MAX_SIZE, {
     getTtl: () => PRICE_CACHE_TTL,
-    getTimestamp: (entry) => entry.timestamp,
+    getTimestamp: entry => entry.timestamp,
 });
 
 // Periodic stale entry cleanup for price cache
@@ -277,82 +243,30 @@ export function clearTokenCaches(): void {
 }
 
 /**
- * Fetch token metadata from Solana Token List API
- */
-async function fetchSolanaTokenMetadata(mints: string[]): Promise<Map<string, SolanaTokenMetadata>> {
-    const results = new Map<string, SolanaTokenMetadata>();
-
-    if (mints.length === 0) return results;
-
-    const { signal, cleanup } = createTimeoutSignal(10000);
-
-    try {
-        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ addresses: mints }),
-            signal,
-        });
-        cleanup();
-
-        if (!response.ok) {
-            throw new Error(`Solana Token List API error: ${response.status}`);
-        }
-
-        const data: { content: SolanaTokenMetadata[] } = await response.json();
-
-        for (const item of data.content) {
-            results.set(item.address, item);
-        }
-    } catch (error) {
-        cleanup();
-        console.warn('[useTokens] Solana Token List API failed:', error);
-    }
-
-    return results;
-}
-
-/**
  * Calculate exponential backoff delay with jitter.
- * Formula: baseDelay * 2^attempt + random jitter (0-500ms)
- *
- * @param attempt - Current retry attempt (0-indexed)
- * @param baseDelay - Base delay in milliseconds
- * @param retryAfter - Optional Retry-After value from server (in seconds)
- * @returns Delay in milliseconds
  */
 function calculateBackoffDelay(attempt: number, baseDelay: number, retryAfter?: number): number {
-    // If server provided Retry-After, honor it (convert from seconds to ms)
     if (retryAfter !== undefined && retryAfter > 0) {
-        // Add small jitter (0-500ms) even when honoring Retry-After
         const jitter = Math.random() * 500;
         return retryAfter * 1000 + jitter;
     }
 
-    // Exponential backoff: baseDelay * 2^attempt
     const exponentialDelay = baseDelay * Math.pow(2, attempt);
-    // Add random jitter (0-500ms) to prevent thundering herd
     const jitter = Math.random() * 500;
     return exponentialDelay + jitter;
 }
 
 /**
  * Parse Retry-After header value.
- * Can be either a number of seconds or an HTTP date.
- *
- * @param retryAfterHeader - Value of the Retry-After header
- * @returns Number of seconds to wait, or undefined if invalid
  */
 function parseRetryAfter(retryAfterHeader: string | null): number | undefined {
     if (!retryAfterHeader) return undefined;
 
-    // Try parsing as a number (seconds)
     const seconds = parseInt(retryAfterHeader, 10);
     if (!isNaN(seconds) && seconds >= 0) {
         return seconds;
     }
 
-    // Try parsing as an HTTP date
     const date = Date.parse(retryAfterHeader);
     if (!isNaN(date)) {
         const waitMs = date - Date.now();
@@ -364,29 +278,12 @@ function parseRetryAfter(retryAfterHeader: string | null): number | undefined {
 
 /**
  * Fetch prices from CoinGecko API with rate limit handling.
- *
- * Features:
- * - Exponential backoff with jitter on 429 responses
- * - Honors Retry-After header when present
- * - Configurable max retries and timeout
- * - Optional API key support for higher rate limits
- *
- * Rate Limits (as of 2024):
- * - Free tier (no API key): 10-30 requests/minute
- * - Demo tier (free API key): 30 requests/minute
- * - Paid tiers: Higher limits based on plan
- *
- * @see https://docs.coingecko.com/reference/introduction
  */
-async function fetchCoinGeckoPrices(
-    coingeckoIds: string[],
-    config?: CoinGeckoConfig,
-): Promise<Map<string, number>> {
+async function fetchCoinGeckoPrices(coingeckoIds: string[], config?: CoinGeckoConfig): Promise<Map<string, number>> {
     const results = new Map<string, number>();
 
     if (coingeckoIds.length === 0) return results;
 
-    // Check price cache first - backoff only applies to uncached IDs
     const now = Date.now();
     const uncachedIds: string[] = [];
 
@@ -399,89 +296,61 @@ async function fetchCoinGeckoPrices(
         }
     }
 
-    // All IDs were cached, no API call needed
     if (uncachedIds.length === 0) return results;
 
-    // Extract config with defaults
     const maxRetries = config?.maxRetries ?? COINGECKO_DEFAULT_MAX_RETRIES;
     const baseDelay = config?.baseDelay ?? COINGECKO_DEFAULT_BASE_DELAY;
     const maxTimeout = config?.maxTimeout ?? COINGECKO_DEFAULT_MAX_TIMEOUT;
     const apiKey = config?.apiKey;
     const isPro = config?.isPro ?? false;
 
-    // Build request URL
     const url = `${COINGECKO_API_BASE_URL}/simple/price?ids=${uncachedIds.join(',')}&vs_currencies=usd`;
 
-    // Build headers (add API key if provided)
     const headers: HeadersInit = {};
     if (apiKey) {
-        // Use appropriate header based on API tier
-        // Pro API: x-cg-pro-api-key, Demo API: x-cg-demo-api-key
         headers[isPro ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key'] = apiKey;
     }
 
-    // Track start time to enforce total timeout
     const startTime = Date.now();
     let attempt = 0;
     let lastError: Error | null = null;
 
     while (attempt <= maxRetries) {
-        // Check if we've exceeded total timeout
         const elapsedTime = Date.now() - startTime;
         if (elapsedTime >= maxTimeout) {
             console.warn(
-                `[useTokens] CoinGecko API: Total timeout (${maxTimeout}ms) exceeded after ${attempt} attempts. ` +
-                    'Returning cached/partial results.',
+                `[useTokens] CoinGecko API: Total timeout (${maxTimeout}ms) exceeded after ${attempt} attempts.`,
             );
             break;
         }
 
-        // Calculate remaining time for this request
         const remainingTimeout = maxTimeout - elapsedTime;
-        const requestTimeout = Math.min(10000, remainingTimeout); // Cap individual request at 10s
+        const requestTimeout = Math.min(10000, remainingTimeout);
         const { signal, cleanup } = createTimeoutSignal(requestTimeout);
 
         try {
-            const response = await fetch(url, {
-                headers,
-                signal,
-            });
+            const response = await fetch(url, { headers, signal });
             cleanup();
 
-            // Handle rate limiting (429 Too Many Requests)
             if (response.status === 429) {
                 const retryAfter = parseRetryAfter(response.headers.get('Retry-After'));
                 const delay = calculateBackoffDelay(attempt, baseDelay, retryAfter);
 
-                console.warn(
-                    `[useTokens] CoinGecko API rate limited (429). ` +
-                        `Attempt ${attempt + 1}/${maxRetries + 1}. ` +
-                        `Retry-After: ${retryAfter ?? 'not specified'}s. ` +
-                        `Waiting ${Math.round(delay)}ms before retry. ` +
-                        `Consider adding an API key for higher limits: https://www.coingecko.com/en/api/pricing`,
-                );
+                console.warn(`[useTokens] CoinGecko API rate limited (429). Waiting ${Math.round(delay)}ms.`);
 
-                // Check if waiting would exceed total timeout
                 if (Date.now() - startTime + delay >= maxTimeout) {
-                    console.warn(
-                        `[useTokens] CoinGecko API: Skipping retry - would exceed total timeout (${maxTimeout}ms). ` +
-                            'Returning cached/partial results.',
-                    );
                     break;
                 }
 
-                // Wait before retrying
                 await new Promise(resolve => setTimeout(resolve, delay));
                 attempt++;
                 continue;
             }
 
-            // Handle other errors
             if (!response.ok) {
                 throw new Error(`CoinGecko API error: ${response.status} ${response.statusText}`);
             }
 
-            // Parse and cache successful response
             const data: Record<string, { usd: number }> = await response.json();
             const fetchTime = Date.now();
 
@@ -492,25 +361,11 @@ async function fetchCoinGeckoPrices(
                 }
             }
 
-            // Success - exit retry loop
             return results;
         } catch (error) {
             cleanup();
             lastError = error as Error;
 
-            // Don't retry on abort/timeout - we're already tracking total timeout
-            if (error instanceof DOMException && error.name === 'AbortError') {
-                console.warn(
-                    `[useTokens] CoinGecko API request timed out. Attempt ${attempt + 1}/${maxRetries + 1}.`,
-                );
-            } else {
-                console.warn(
-                    `[useTokens] CoinGecko API request failed. Attempt ${attempt + 1}/${maxRetries + 1}:`,
-                    error,
-                );
-            }
-
-            // For non-429 errors, use backoff but continue retry loop
             if (attempt < maxRetries) {
                 const delay = calculateBackoffDelay(attempt, baseDelay);
                 if (Date.now() - startTime + delay < maxTimeout) {
@@ -521,14 +376,8 @@ async function fetchCoinGeckoPrices(
         }
     }
 
-    // All retries exhausted
-    if (attempt > maxRetries) {
-        console.warn(
-            `[useTokens] CoinGecko API: All ${maxRetries + 1} attempts failed. ` +
-                'Returning cached/partial results. ' +
-                `Last error: ${lastError?.message ?? 'Unknown error'}. ` +
-                'If you are frequently rate limited, consider adding an API key: https://www.coingecko.com/en/api/pricing',
-        );
+    if (attempt > maxRetries && lastError) {
+        console.warn(`[useTokens] CoinGecko API: All attempts failed. Last error: ${lastError.message}`);
     }
 
     return results;
@@ -536,73 +385,52 @@ async function fetchCoinGeckoPrices(
 
 /**
  * Fetch token metadata from Solana Token List API and prices from CoinGecko.
- * Hybrid approach for vendor flexibility.
- *
- * @param mints - Array of token mint addresses
- * @param coingeckoConfig - Optional CoinGecko API configuration
  */
 async function fetchTokenMetadataHybrid(
     mints: string[],
     coingeckoConfig?: CoinGeckoConfig,
-): Promise<Map<string, TokenMetadata>> {
-    const results = new Map<string, TokenMetadata>();
+    options?: { onUpdate?: () => void; cluster?: ClusterType },
+): Promise<boolean> {
+    if (mints.length === 0) return false;
 
-    if (mints.length === 0) return results;
-
-    // Check cache first
-    const uncachedMints: string[] = [];
     const now = Date.now();
 
+    const mintsNeedingTokenList: string[] = [];
+    const staleCoingeckoIdToMint = new Map<string, string>();
+
     for (const mint of mints) {
         const cached = metadataCache.get(mint);
-        if (cached) {
-            // Check if we need to refresh prices
-            const priceStale =
-                cached.coingeckoId && (!priceCache.get(cached.coingeckoId) || now - (priceCache.get(cached.coingeckoId)?.timestamp ?? 0) >= PRICE_CACHE_TTL);
+        if (!cached) {
+            mintsNeedingTokenList.push(mint);
+            continue;
+        }
 
-            if (priceStale && cached.coingeckoId) {
-                // Metadata is cached but price is stale - we'll refresh price later
-                uncachedMints.push(mint);
-            }
-            results.set(mint, cached);
-        } else {
-            uncachedMints.push(mint);
+        if (!cached.coingeckoId) continue;
+
+        const priceEntry = priceCache.get(cached.coingeckoId);
+        const isFresh = Boolean(priceEntry && now - priceEntry.timestamp < PRICE_CACHE_TTL);
+        if (!isFresh) {
+            staleCoingeckoIdToMint.set(cached.coingeckoId, mint);
         }
     }
 
-    // If all mints are fully cached, return early
-    if (uncachedMints.length === 0) return results;
+    let didUpdate = false;
 
-    // 1. Fetch metadata from Solana Token List API
-    const solanaMetadata = await fetchSolanaTokenMetadata(uncachedMints);
+    // 1. Fetch token list metadata ONLY for mints missing metadata
+    const tokenListMetadata = await fetchSolanaTokenListMetadata(mintsNeedingTokenList, {
+        timeoutMs: 10000,
+        cluster: options?.cluster,
+    });
 
-    // 2. Extract coingeckoIds for price lookup
-    const coingeckoIdToMint = new Map<string, string>();
-    for (const [mint, meta] of solanaMetadata) {
-        if (meta.extensions?.coingeckoId) {
-            coingeckoIdToMint.set(meta.extensions.coingeckoId, mint);
-        }
-    }
-
-    // Also check cached mints that need price refresh
-    for (const mint of mints) {
-        const cached = metadataCache.get(mint);
-        if (cached?.coingeckoId && !coingeckoIdToMint.has(cached.coingeckoId)) {
-            coingeckoIdToMint.set(cached.coingeckoId, mint);
-        }
-    }
-
-    // 3. Fetch prices from CoinGecko (with rate limit handling)
-    const prices = await fetchCoinGeckoPrices([...coingeckoIdToMint.keys()], coingeckoConfig);
-
-    // 4. Combine metadata with prices
-    for (const [mint, meta] of solanaMetadata) {
+    // 2. Store token-list metadata into cache immediately (so logos show ASAP).
+    for (const [mint, meta] of tokenListMetadata) {
         const coingeckoId = meta.extensions?.coingeckoId;
-        const usdPrice = coingeckoId ? prices.get(coingeckoId) : undefined;
+        const cachedPrice = coingeckoId ? priceCache.get(coingeckoId) : undefined;
+        const usdPrice = cachedPrice?.price;
 
         const combined: TokenMetadata = {
             address: meta.address,
-            name: meta.address === NATIVE_MINT ? 'Solana' : meta.name,
+            name: meta.address === NATIVE_SOL_MINT ? 'Solana' : meta.name,
             symbol: meta.symbol,
             decimals: meta.decimals,
             logoURI: meta.logoURI,
@@ -610,63 +438,123 @@ async function fetchTokenMetadataHybrid(
             usdPrice,
         };
 
-        results.set(mint, combined);
-        metadataCache.set(mint, combined);
+        const existing = metadataCache.get(mint);
+        const isDifferent =
+            !existing ||
+            existing.name !== combined.name ||
+            existing.symbol !== combined.symbol ||
+            existing.decimals !== combined.decimals ||
+            existing.logoURI !== combined.logoURI ||
+            existing.coingeckoId !== combined.coingeckoId ||
+            existing.usdPrice !== combined.usdPrice;
+
+        if (isDifferent) {
+            didUpdate = true;
+            metadataCache.set(mint, combined);
+        }
     }
 
-    // Update prices for cached mints
+    if (didUpdate) {
+        options?.onUpdate?.();
+    }
+
+    // 3. Collect CoinGecko IDs needing price refresh (from new + cached metadata)
+    const coingeckoIdToMint = new Map<string, string>(staleCoingeckoIdToMint);
+    for (const [mint, meta] of tokenListMetadata) {
+        if (meta.extensions?.coingeckoId) {
+            coingeckoIdToMint.set(meta.extensions.coingeckoId, mint);
+        }
+    }
+
+    if (coingeckoIdToMint.size === 0) {
+        return didUpdate;
+    }
+
+    // 4. Fetch prices (only stale/missing thanks to TTL in fetchCoinGeckoPrices)
+    const prices = await fetchCoinGeckoPrices([...coingeckoIdToMint.keys()], coingeckoConfig);
+
+    // 5. Update prices for cached mints (only bump if the displayed price changes)
+    let didUpdatePrices = false;
     for (const [coingeckoId, mint] of coingeckoIdToMint) {
-        const cached = results.get(mint) ?? metadataCache.get(mint);
+        const cached = metadataCache.get(mint);
         if (cached) {
             const usdPrice = prices.get(coingeckoId);
             if (usdPrice !== undefined) {
-                cached.usdPrice = usdPrice;
-                results.set(mint, cached);
-                metadataCache.set(mint, cached);
+                if (cached.usdPrice !== usdPrice) {
+                    didUpdate = true;
+                    didUpdatePrices = true;
+                    cached.usdPrice = usdPrice;
+                    metadataCache.set(mint, cached);
+                }
             }
         }
     }
 
-    return results;
+    if (didUpdatePrices) {
+        options?.onUpdate?.();
+    }
+
+    return didUpdate;
 }
 
 /**
- * Format balance for display
+ * Format balance for display (BigInt-safe)
  */
 function formatBalance(amount: bigint, decimals: number): string {
-    const value = Number(amount) / Math.pow(10, decimals);
-    return value.toLocaleString(undefined, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: Math.min(decimals, 6),
+    return formatBigIntBalance(amount, decimals, {
+        maxDecimals: Math.min(decimals, 6),
     });
 }
 
 /**
- * Format USD value for display
+ * Format USD value for display (BigInt-safe)
  */
 function formatUsd(amount: bigint, decimals: number, usdPrice: number): string {
-    const value = (Number(amount) / Math.pow(10, decimals)) * usdPrice;
-    return value.toLocaleString(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
+    return formatBigIntUsd(amount, decimals, usdPrice);
+}
+
+/** Selection type for wallet assets */
+interface TokensSelection {
+    lamports: bigint;
+    tokenAccounts: TokenAccountInfo[];
+    address: string;
 }
 
 /**
- * Transform an image URL through a proxy if configured
+ * Select function to get token-relevant data from wallet assets
  */
-function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
-    if (!url) return undefined;
-    if (!imageProxy) return url;
-    const encodedUrl = encodeURIComponent(url);
-    return imageProxy.endsWith('/') ? imageProxy + encodedUrl : imageProxy + '/' + encodedUrl;
+function selectTokens(assets: WalletAssetsData | undefined, address: string): TokensSelection {
+    return {
+        lamports: assets?.lamports ?? 0n,
+        tokenAccounts: assets?.tokenAccounts ?? [],
+        address,
+    };
+}
+
+/**
+ * Sort tokens by USD value (highest first), tokens with metadata first
+ */
+function sortByValueDesc(a: Token, b: Token): number {
+    const metadataSort = (b.logo ? 1 : 0) - (a.logo ? 1 : 0);
+    if (metadataSort !== 0) return metadataSort;
+
+    const aValue = (Number(a.amount) / Math.pow(10, a.decimals)) * (a.usdPrice ?? 0);
+    const bValue = (Number(b.amount) / Math.pow(10, b.decimals)) * (b.usdPrice ?? 0);
+    return bValue - aValue;
 }
 
 /**
  * Hook for fetching wallet token holdings.
  * Fetches metadata (name, symbol, icon) from Solana Token List API and USD prices from CoinGecko.
+ *
+ * Features:
+ * - Automatic request deduplication across components
+ * - Shared data with useBalance (single RPC query)
+ * - Token-2022 support
+ * - Shared polling interval (ref-counted)
+ * - Configurable auto-refresh behavior
+ * - Abort support for in-flight requests
+ * - Optional client override
  *
  * @example Basic usage
  * ```tsx
@@ -688,163 +576,195 @@ function transformImageUrl(url: string | undefined, imageProxy: string | undefin
  *   );
  * }
  * ```
+ *
+ * @example With options
+ * ```tsx
+ * function TokenList() {
+ *   const { tokens, refetch, abort } = useTokens({
+ *     autoRefresh: true,
+ *     refreshInterval: 30000,
+ *     includeNativeSol: true,
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       {tokens.map(token => (
+ *         <div key={token.mint}>{token.symbol}: {token.formatted}</div>
+ *       ))}
+ *       <button onClick={() => refetch()}>Refresh</button>
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
     const {
+        enabled = true,
         includeZeroBalance = false,
         autoRefresh = false,
         refreshInterval = 60000,
         fetchMetadata = true,
         includeNativeSol = true,
+        staleTimeMs = 0,
+        cacheTimeMs = 5 * 60 * 1000, // 5 minutes
+        refetchOnMount = 'stale',
+        client: clientOverride,
     } = options;
 
     const { address, connected } = useAccount();
-    const client = useSolanaClient();
+    const { type: clusterType } = useCluster();
     const connectorClient = useConnectorClient();
 
-    const [tokens, setTokens] = useState<Token[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-    const [totalAccounts, setTotalAccounts] = useState(0);
-
-    // Extract the actual client to use as a stable dependency
-    const rpcClient = client?.client ?? null;
     // Get imageProxy and coingecko config from connector config
     const connectorConfig = connectorClient?.getConfig();
     const imageProxy = connectorConfig?.imageProxy;
     const coingeckoConfig = connectorConfig?.coingecko;
 
-    const fetchTokens = useCallback(async () => {
-        if (!connected || !address || !rpcClient) {
-            setTokens([]);
-            setTotalAccounts(0);
-            return;
+    // Memoize select function to avoid new function reference on every render
+    const selectFn = useCallback(
+        (assets: WalletAssetsData | undefined) => selectTokens(assets, address ?? ''),
+        [address],
+    );
+
+    // Use shared wallet assets query
+    const {
+        data: selection,
+        error,
+        isFetching,
+        updatedAt,
+        refetch: sharedRefetch,
+        abort,
+    } = useWalletAssets<TokensSelection>({
+        enabled,
+        staleTimeMs,
+        cacheTimeMs,
+        refetchOnMount,
+        refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        client: clientOverride,
+        select: selectFn,
+    });
+
+    const lamports = selection?.lamports ?? 0n;
+    const tokenAccounts = selection?.tokenAccounts ?? [];
+    const walletAddress = selection?.address ?? '';
+
+    // Build base tokens from raw data (without metadata)
+    const baseTokens = useMemo((): Token[] => {
+        const result: Token[] = [];
+
+        // Add native SOL if requested
+        if (includeNativeSol && walletAddress) {
+            if (includeZeroBalance || lamports > 0n) {
+                result.push({
+                    mint: NATIVE_SOL_MINT,
+                    tokenAccount: walletAddress,
+                    amount: lamports,
+                    decimals: 9,
+                    formatted: formatBalance(lamports, 9),
+                    isFrozen: false,
+                    owner: walletAddress,
+                });
+            }
         }
 
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const rpc = rpcClient.rpc;
-            const walletAddress = toAddress(address);
-            const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-
-            // Fetch SOL balance and token accounts in parallel
-            const [balanceResult, tokenAccountsResult] = await Promise.all([
-                includeNativeSol ? rpc.getBalance(walletAddress).send() : Promise.resolve(null),
-                rpc
-                    .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
-                    .send(),
-            ]);
-
-            const tokenList: Token[] = [];
-            const mints: string[] = [];
-
-            // Add native SOL if requested
-            if (includeNativeSol && balanceResult !== null) {
-                const solBalance = balanceResult.value;
-                if (includeZeroBalance || solBalance > 0n) {
-                    tokenList.push({
-                        mint: NATIVE_MINT,
-                        tokenAccount: address, // SOL uses wallet address
-                        amount: solBalance,
-                        decimals: 9,
-                        formatted: formatBalance(solBalance, 9),
-                        isFrozen: false,
-                        owner: address,
-                    });
-                    mints.push(NATIVE_MINT);
-                }
+        // Add SPL tokens
+        for (const account of tokenAccounts) {
+            if (!includeZeroBalance && account.amount === 0n) {
+                continue;
             }
 
-            // Add SPL tokens
-            for (const account of tokenAccountsResult.value) {
-                const parsed = account.account.data as any;
-                if (parsed?.parsed?.info) {
-                    const info = parsed.parsed.info;
-                    const amount = BigInt(info.tokenAmount?.amount || '0');
-                    const decimals = info.tokenAmount?.decimals || 0;
+            result.push({
+                mint: account.mint,
+                tokenAccount: account.pubkey,
+                amount: account.amount,
+                decimals: account.decimals,
+                formatted: formatBalance(account.amount, account.decimals),
+                isFrozen: account.isFrozen,
+                owner: account.owner,
+                programId: account.programId,
+            });
+        }
 
-                    // Skip zero balance tokens unless requested
-                    if (!includeZeroBalance && amount === 0n) {
-                        continue;
-                    }
+        return result;
+    }, [lamports, tokenAccounts, walletAddress, includeNativeSol, includeZeroBalance]);
 
-                    tokenList.push({
-                        mint: info.mint,
-                        tokenAccount: account.pubkey,
-                        amount,
-                        decimals,
-                        formatted: formatBalance(amount, decimals),
-                        isFrozen: info.state === 'frozen',
-                        owner: info.owner,
-                    });
+    // Extract mints for metadata fetching
+    const mints = useMemo(() => {
+        const unique = new Set<string>();
+        for (const token of baseTokens) {
+            unique.add(token.mint);
+        }
+        return [...unique].sort();
+    }, [baseTokens]);
+    const mintsKey = useMemo(() => mints.join(','), [mints]);
 
-                    mints.push(info.mint);
-                }
-            }
+    // Metadata version counter - bumped when metadata cache is updated
+    // This triggers re-derivation of tokens with fresh metadata
+    const [metadataVersion, setMetadataVersion] = useState(0);
 
-            // Set initial tokens immediately so UI is responsive
-            setTokens([...tokenList]);
-            setTotalAccounts(tokenAccountsResult.value.length + (includeNativeSol ? 1 : 0));
-            setLastUpdated(new Date());
+    // Fetch metadata/prices when mint set changes.
+    // The shared token-list cache prevents duplicate network requests, so we don't need
+    // an in-flight guard here. This ensures setMetadataVersion is always called reliably.
+    useEffect(() => {
+        if (!fetchMetadata || !mintsKey) return;
 
-            // Fetch metadata from Solana Token List API + CoinGecko prices
-            if (fetchMetadata && mints.length > 0) {
-                const metadata = await fetchTokenMetadataHybrid(mints, coingeckoConfig);
+        let isMounted = true;
 
-                // Apply metadata to tokens
-                for (let i = 0; i < tokenList.length; i++) {
-                    const meta = metadata.get(tokenList[i].mint);
-                    if (meta) {
-                        tokenList[i] = {
-                            ...tokenList[i],
-                            name: meta.name,
-                            symbol: meta.symbol,
-                            logo: transformImageUrl(meta.logoURI, imageProxy),
-                            usdPrice: meta.usdPrice,
-                            formattedUsd: meta.usdPrice
-                                ? formatUsd(tokenList[i].amount, tokenList[i].decimals, meta.usdPrice)
-                                : undefined,
-                        };
-                    }
-                }
+        (async () => {
+            try {
+                const mintList = mintsKey.split(',');
 
-                // Sort by USD value (highest first), tokens with metadata first
-                tokenList.sort((a, b) => {
-                    // Tokens with metadata come first
-                    const metadataSort = (b.logo ? 1 : 0) - (a.logo ? 1 : 0);
-                    if (metadataSort !== 0) return metadataSort;
-
-                    // Then sort by USD value
-                    const aValue = (Number(a.amount) / Math.pow(10, a.decimals)) * (a.usdPrice ?? 0);
-                    const bValue = (Number(b.amount) / Math.pow(10, b.decimals)) * (b.usdPrice ?? 0);
-                    return bValue - aValue;
+                // Fetch and cache metadata; onUpdate is called immediately when logos arrive
+                await fetchTokenMetadataHybrid(mintList, coingeckoConfig, {
+                    onUpdate: () => {
+                        if (isMounted) setMetadataVersion(v => v + 1);
+                    },
+                    cluster: clusterType ?? undefined,
                 });
 
-                setTokens([...tokenList]);
+                // Final bump in case onUpdate wasn't called (e.g., only prices updated)
+                if (isMounted) setMetadataVersion(v => v + 1);
+            } catch (err) {
+                console.error('[useTokens] Failed to fetch metadata:', err);
             }
-        } catch (err) {
-            setError(err as Error);
-            console.error('[useTokens] Failed to fetch tokens:', err);
-        } finally {
-            setIsLoading(false);
+        })();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [mintsKey, fetchMetadata, coingeckoConfig, clusterType]);
+
+    // Derive final tokens from baseTokens + metadata cache
+    // This ensures balances always stay current (derived from latest baseTokens)
+    const tokens = useMemo(() => {
+        if (!fetchMetadata) {
+            return baseTokens.slice().sort(sortByValueDesc);
         }
-    }, [connected, address, rpcClient, includeZeroBalance, fetchMetadata, includeNativeSol, imageProxy, coingeckoConfig]);
 
-    // Fetch on mount and when dependencies change
-    useEffect(() => {
-        fetchTokens();
-    }, [fetchTokens]);
+        // Apply metadata from cache
+        const enriched = baseTokens.map(token => {
+            const meta = metadataCache.get(token.mint);
+            if (!meta) return token;
 
-    // Auto-refresh
-    useEffect(() => {
-        if (!connected || !autoRefresh) return;
+            const cachedPrice = meta.coingeckoId ? priceCache.get(meta.coingeckoId) : undefined;
+            const usdPrice = cachedPrice?.price ?? meta.usdPrice;
 
-        const interval = setInterval(fetchTokens, refreshInterval);
-        return () => clearInterval(interval);
-    }, [connected, autoRefresh, refreshInterval, fetchTokens]);
+            return {
+                ...token,
+                name: meta.name,
+                symbol: meta.symbol,
+                logo: transformImageUrl(meta.logoURI, imageProxy),
+                usdPrice,
+                formattedUsd: usdPrice ? formatUsd(token.amount, token.decimals, usdPrice) : undefined,
+            };
+        });
+
+        return enriched.sort(sortByValueDesc);
+        // metadataVersion triggers re-derivation when cache is updated
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [baseTokens, fetchMetadata, imageProxy, metadataVersion]);
+
+    const totalAccounts = tokenAccounts.length + (includeNativeSol ? 1 : 0);
 
     // Start/stop cache cleanup interval based on hook lifecycle
     useEffect(() => {
@@ -858,21 +778,32 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
     // Clear caches on disconnect/session end
     useEffect(() => {
         if (wasConnectedRef.current && !connected) {
-            // User just disconnected - clear caches
             clearTokenCaches();
         }
         wasConnectedRef.current = connected;
     }, [connected]);
 
+    // Preserve old behavior: don't surface "refresh failed" errors if we already have data
+    const visibleError = updatedAt ? null : error;
+
+    // Wrap refetch to match expected signature
+    const refetch = useCallback(
+        async (opts?: { signal?: AbortSignal }) => {
+            await sharedRefetch(opts);
+        },
+        [sharedRefetch],
+    );
+
     return useMemo(
         () => ({
             tokens,
-            isLoading,
-            error,
-            refetch: fetchTokens,
-            lastUpdated,
+            isLoading: isFetching,
+            error: visibleError,
+            refetch,
+            abort,
+            lastUpdated: updatedAt ? new Date(updatedAt) : null,
             totalAccounts,
         }),
-        [tokens, isLoading, error, fetchTokens, lastUpdated, totalAccounts],
+        [tokens, isFetching, visibleError, refetch, abort, updatedAt, totalAccounts],
     );
 }

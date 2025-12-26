@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Prism as SyntaxHighlighter, type SyntaxHighlighterProps } from 'react-syntax-highlighter';
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 interface CodeBlockProps {
     code: string;
@@ -31,10 +35,7 @@ function CodeBlockFallback({
 
     return (
         <pre
-            className={cn(
-                'overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-5 text-gray-800',
-                className,
-            )}
+            className={cn('overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-5 text-gray-800', className)}
             style={{
                 margin: 0,
                 ...customStyle,
@@ -66,11 +67,7 @@ export function CodeBlock({
     lineNumberStyle,
     wrapLongLines,
 }: CodeBlockProps) {
-    const [hasMounted, setHasMounted] = useState(false);
-
-    useEffect(() => {
-        setHasMounted(true);
-    }, []);
+    const hasMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
     if (!hasMounted) {
         return (

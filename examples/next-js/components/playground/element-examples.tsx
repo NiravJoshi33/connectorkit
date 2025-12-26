@@ -26,6 +26,58 @@ function RenderPropValue({ name, children }: { name: string; children: React.Rea
     );
 }
 
+// Component for displaying overlapping swap token icons
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
+    const offset = size * 0.6; // 60% offset for overlap
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
+            {/* From token (back) */}
+            <div
+                className="absolute left-0 top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ width: size, height: size }}
+            >
+                {fromIcon ? (
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+            {/* To token (front, overlapping) */}
+            <div
+                className="absolute top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ left: offset, width: size, height: size }}
+            >
+                {toIcon ? (
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function shortId(id: string) {
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+}
+
+function getTransactionTitle(tx: { type: string; programName?: string; programId?: string }) {
+    if (tx.type === 'tokenAccountClosed') return 'Token Account Closed';
+    if (tx.type === 'program') {
+        const program = tx.programName ?? (tx.programId ? shortId(tx.programId) : 'Unknown');
+        return `Program: ${program}`;
+    }
+    return tx.type;
+}
+
+function getTransactionSubtitle(tx: { type: string; formattedTime: string; instructionTypes?: string[] }) {
+    if (tx.type === 'program' && tx.instructionTypes?.length) {
+        const summary = tx.instructionTypes.slice(0, 2).join(' · ');
+        return `${tx.formattedTime} · ${summary}`;
+    }
+    return tx.formattedTime;
+}
+
 const elementExamples: ExampleConfig[] = [
     {
         id: 'account-element',
@@ -74,17 +126,10 @@ import { Wallet, Copy, Check } from 'lucide-react';
                                         </AvatarFallback>
                                     </Avatar>
                                 </RenderPropValue>
-                                <RenderPropValue name="walletName">
-                                    {walletName || '—'}
-                                </RenderPropValue>
-                                <RenderPropValue name="formatted">
-                                    {formatted || '—'}
-                                </RenderPropValue>
+                                <RenderPropValue name="walletName">{walletName || '—'}</RenderPropValue>
+                                <RenderPropValue name="formatted">{formatted || '—'}</RenderPropValue>
                                 <RenderPropValue name="copy">
-                                    <button
-                                        onClick={copy}
-                                        className="p-1 hover:bg-muted rounded-md transition-colors"
-                                    >
+                                    <button onClick={copy} className="p-1 hover:bg-muted rounded-md transition-colors">
                                         {copied ? (
                                             <Check className="h-3.5 w-3.5 text-green-500" />
                                         ) : (
@@ -92,9 +137,7 @@ import { Wallet, Copy, Check } from 'lucide-react';
                                         )}
                                     </button>
                                 </RenderPropValue>
-                                <RenderPropValue name="copied">
-                                    {String(copied)}
-                                </RenderPropValue>
+                                <RenderPropValue name="copied">{String(copied)}</RenderPropValue>
                             </div>
                         </div>
 
@@ -155,7 +198,7 @@ import { RefreshCw } from 'lucide-react';
                 <p className="text-xs text-muted-foreground font-medium">SOL Balance</p>
                 <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
             </div>
-            <button onClick={refetch} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
+            <button onClick={() => refetch()} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
                 <RefreshCw className={\`h-4 w-4 \${isLoading ? 'animate-spin' : ''}\`} />
             </button>
         </div>
@@ -172,15 +215,11 @@ import { RefreshCw } from 'lucide-react';
                                 {'<BalanceElement />'}
                             </span>
                             <div className="space-y-0.5 pt-1">
-                                <RenderPropValue name="solBalance">
-                                    {solBalance?.toFixed(4) ?? '—'}
-                                </RenderPropValue>
-                                <RenderPropValue name="isLoading">
-                                    {String(isLoading)}
-                                </RenderPropValue>
+                                <RenderPropValue name="solBalance">{solBalance?.toFixed(4) ?? '—'}</RenderPropValue>
+                                <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                 <RenderPropValue name="refetch">
                                     <button
-                                        onClick={refetch}
+                                        onClick={() => refetch()}
                                         disabled={isLoading}
                                         className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                     >
@@ -212,7 +251,7 @@ import { RefreshCw } from 'lucide-react';
                                     <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
                                 </div>
                                 <button
-                                    onClick={refetch}
+                                    onClick={() => refetch()}
                                     disabled={isLoading}
                                     className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                 >
@@ -290,12 +329,8 @@ const clusterColors: Record<string, string> = {
                                             {cluster?.label || '—'}
                                         </div>
                                     </RenderPropValue>
-                                    <RenderPropValue name="clusters">
-                                        [{clusters.length} items]
-                                    </RenderPropValue>
-                                    <RenderPropValue name="setCluster">
-                                        fn()
-                                    </RenderPropValue>
+                                    <RenderPropValue name="clusters">[{clusters.length} items]</RenderPropValue>
+                                    <RenderPropValue name="setCluster">fn()</RenderPropValue>
                                 </div>
                             </div>
 
@@ -386,9 +421,7 @@ import { LogOut } from 'lucide-react';
                                         <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
                                     </button>
                                 </RenderPropValue>
-                                <RenderPropValue name="disconnecting">
-                                    {String(disconnecting)}
-                                </RenderPropValue>
+                                <RenderPropValue name="disconnecting">{String(disconnecting)}</RenderPropValue>
                             </div>
                         </div>
 
@@ -427,7 +460,8 @@ import { LogOut } from 'lucide-react';
     {
         id: 'token-list-element',
         name: 'TokenListElement',
-        description: 'Display token holdings with metadata from Jupiter. Includes loading states and refetch.',
+        description:
+            'Display token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes loading states and refetch.',
         code: `import { TokenListElement } from '@solana/connector/react';
 import { Coins, RefreshCw } from 'lucide-react';
 
@@ -437,7 +471,7 @@ import { Coins, RefreshCw } from 'lucide-react';
         <div className="rounded-lg border bg-card w-[350px]">
             <div className="flex items-center justify-between p-3 border-b">
                 <span className="font-medium text-sm">Tokens ({tokens.length})</span>
-                <button onClick={refetch} disabled={isLoading}>
+                <button onClick={() => refetch()} disabled={isLoading}>
                     <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
                 </button>
             </div>
@@ -478,15 +512,11 @@ import { Coins, RefreshCw } from 'lucide-react';
                                 <div className="space-y-3">
                                     {/* Top-level props */}
                                     <div className="space-y-0.5 pt-1">
-                                        <RenderPropValue name="tokens">
-                                            [{tokens.length} items]
-                                        </RenderPropValue>
-                                        <RenderPropValue name="isLoading">
-                                            {String(isLoading)}
-                                        </RenderPropValue>
+                                        <RenderPropValue name="tokens">[{tokens.length} items]</RenderPropValue>
+                                        <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                         <RenderPropValue name="refetch">
                                             <button
-                                                onClick={refetch}
+                                                onClick={() => refetch()}
                                                 disabled={isLoading}
                                                 className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                             >
@@ -568,13 +598,11 @@ import { Coins, RefreshCw } from 'lucide-react';
                                     <div className="flex items-center justify-between p-3 border-b">
                                         <span className="font-medium text-sm">Tokens ({tokens.length})</span>
                                         <button
-                                            onClick={refetch}
+                                            onClick={() => refetch()}
                                             disabled={isLoading}
                                             className="p-1 hover:bg-muted rounded"
                                         >
-                                            <RefreshCw
-                                                className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`}
-                                            />
+                                            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                                         </button>
                                     </div>
                                     <div className="divide-y max-h-[200px] overflow-y-auto">
@@ -624,6 +652,9 @@ import { ExternalLink, Coins } from 'lucide-react';
 
 <TransactionHistoryElement
     limit={5}
+    // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+    detailsConcurrency={4}
+    fetchDetails
     render={({ transactions, isLoading, hasMore, loadMore }) => (
         <div className="rounded-lg border bg-card w-[400px]">
             <div className="p-3 border-b">
@@ -668,6 +699,8 @@ import { ExternalLink, Coins } from 'lucide-react';
         render: () => (
             <TransactionHistoryElement
                 limit={5}
+                detailsConcurrency={4}
+                fetchDetails
                 render={({ transactions, isLoading, hasMore, loadMore }) => {
                     const sampleTx = transactions[0];
                     return (
@@ -684,15 +717,9 @@ import { ExternalLink, Coins } from 'lucide-react';
                                         <RenderPropValue name="transactions">
                                             [{transactions.length} items]
                                         </RenderPropValue>
-                                        <RenderPropValue name="isLoading">
-                                            {String(isLoading)}
-                                        </RenderPropValue>
-                                        <RenderPropValue name="hasMore">
-                                            {String(hasMore)}
-                                        </RenderPropValue>
-                                        <RenderPropValue name="loadMore">
-                                            fn()
-                                        </RenderPropValue>
+                                        <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
+                                        <RenderPropValue name="hasMore">{String(hasMore)}</RenderPropValue>
+                                        <RenderPropValue name="loadMore">fn()</RenderPropValue>
                                     </div>
 
                                     {/* Sample transaction item breakdown */}
@@ -783,7 +810,13 @@ import { ExternalLink, Coins } from 'lucide-react';
                                                 rel="noopener noreferrer"
                                                 className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
                                             >
-                                                {tx.tokenIcon ? (
+                                                {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                                    <SwapTokenIcon
+                                                        fromIcon={tx.swapFromToken?.icon}
+                                                        toIcon={tx.swapToToken?.icon}
+                                                        size={32}
+                                                    />
+                                                ) : tx.tokenIcon ? (
                                                     <img src={tx.tokenIcon} className="h-8 w-8 rounded-full" alt="" />
                                                 ) : (
                                                     <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -791,8 +824,10 @@ import { ExternalLink, Coins } from 'lucide-react';
                                                     </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sm">{tx.type}</p>
-                                                    <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                                    <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {getTransactionSubtitle(tx)}
+                                                    </p>
                                                 </div>
                                                 {tx.formattedAmount && (
                                                     <span
@@ -851,8 +886,8 @@ export function ElementExamplesSection() {
                 </div>
                 <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Elements Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-xl">
-                    Headless all-in-one hooks components with render props. Each component manages its own state and data
-                    fetching—you just provide the UI.
+                    Headless all-in-one hooks components with render props. Each component manages its own state and
+                    data fetching—you just provide the UI.
                 </p>
             </div>
 

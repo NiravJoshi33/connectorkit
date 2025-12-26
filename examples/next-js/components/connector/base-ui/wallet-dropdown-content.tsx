@@ -43,7 +43,17 @@ const clusterColors: Record<string, string> = {
 };
 
 // Custom Avatar component
-function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) {
+function Avatar({
+    src,
+    alt,
+    fallback,
+    className,
+}: {
+    src?: string;
+    alt?: string;
+    fallback?: React.ReactNode;
+    className?: string;
+}) {
     const [hasError, setHasError] = useState(false);
 
     return (
@@ -56,9 +66,7 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
                     onError={() => setHasError(true)}
                 />
             ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted">
-                    {fallback}
-                </div>
+                <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
             )}
         </div>
     );
@@ -67,6 +75,60 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
 // Separator component
 function Separator({ className }: { className?: string }) {
     return <div className={`shrink-0 bg-border h-[1px] w-full ${className || ''}`} />;
+}
+
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
+    const offset = size * 0.6;
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
+            <div
+                className="absolute left-0 top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ width: size, height: size }}
+            >
+                {fromIcon ? (
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+            <div
+                className="absolute top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ left: offset, width: size, height: size }}
+            >
+                {toIcon ? (
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function formatTransactionType(type: string) {
+    if (type === 'tokenAccountClosed') return 'Token Account Closed';
+    return type;
+}
+
+function shortId(id: string) {
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+}
+
+function getTransactionTitle(tx: { type: string; programName?: string; programId?: string }) {
+    if (tx.type === 'tokenAccountClosed') return 'Token Account Closed';
+    if (tx.type === 'program') {
+        const program = tx.programName ?? (tx.programId ? shortId(tx.programId) : 'Unknown');
+        return `Program: ${program}`;
+    }
+    return tx.type;
+}
+
+function getTransactionSubtitle(tx: { type: string; formattedTime: string; instructionTypes?: string[] }) {
+    if (tx.type === 'program' && tx.instructionTypes?.length) {
+        const summary = tx.instructionTypes.slice(0, 2).join(' · ');
+        return `${tx.formattedTime} · ${summary}`;
+    }
+    return tx.formattedTime;
 }
 
 export function WalletDropdownContent({ selectedAccount, walletIcon, walletName }: WalletDropdownContentProps) {
@@ -153,7 +215,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm text-muted-foreground">Balance</span>
                                 <button
-                                    onClick={refetch}
+                                    onClick={() => refetch()}
                                     disabled={isLoading}
                                     className="p-1 hover:bg-accent rounded transition-colors disabled:opacity-50"
                                 >
@@ -178,13 +240,19 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 {/* Tokens & Transactions using Base UI Collapsible */}
                 <div className="space-y-2">
                     {/* Tokens */}
-                    <Collapsible open={isTokensOpen} onOpenChange={setIsTokensOpen} className="border rounded-[12px] px-3">
+                    <Collapsible
+                        open={isTokensOpen}
+                        onOpenChange={setIsTokensOpen}
+                        className="border rounded-[12px] px-3"
+                    >
                         <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:no-underline hover:cursor-pointer">
                             <div className="flex items-center gap-2">
                                 <Coins className="h-4 w-4" />
                                 <span className="font-medium text-sm">Tokens</span>
                             </div>
-                            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTokensOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTokensOpen ? 'rotate-180' : ''}`}
+                            />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <TokenListElement
@@ -238,13 +306,19 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     </Collapsible>
 
                     {/* Transactions */}
-                    <Collapsible open={isTransactionsOpen} onOpenChange={setIsTransactionsOpen} className="border rounded-[12px] px-3">
+                    <Collapsible
+                        open={isTransactionsOpen}
+                        onOpenChange={setIsTransactionsOpen}
+                        className="border rounded-[12px] px-3"
+                    >
                         <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:no-underline hover:cursor-pointer">
                             <div className="flex items-center gap-2">
                                 <History className="h-4 w-4" />
                                 <span className="font-medium text-sm">Recent Activity</span>
                             </div>
-                            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTransactionsOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTransactionsOpen ? 'rotate-180' : ''}`}
+                            />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <TransactionHistoryElement
@@ -273,7 +347,13 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                     className="flex items-center gap-3 py-1 hover:bg-muted/50 rounded-lg px-1 -mx-1 transition-colors"
                                                 >
                                                     <div className="relative">
-                                                        {tx.tokenIcon ? (
+                                                        {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                                            <SwapTokenIcon
+                                                                fromIcon={tx.swapFromToken?.icon}
+                                                                toIcon={tx.swapToToken?.icon}
+                                                                size={32}
+                                                            />
+                                                        ) : tx.tokenIcon ? (
                                                             <img
                                                                 src={tx.tokenIcon}
                                                                 className="h-8 w-8 rounded-full"
@@ -285,23 +365,27 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                             </div>
                                                         )}
                                                         {/* Direction indicator */}
-                                                        <div
-                                                            className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
-                                                                tx.direction === 'in'
-                                                                    ? 'bg-green-500 text-white'
-                                                                    : 'bg-orange-500 text-white'
-                                                            }`}
-                                                        >
-                                                            {tx.direction === 'in' ? (
-                                                                <ArrowDownLeft className="h-2 w-2" />
-                                                            ) : (
-                                                                <ArrowUpRight className="h-2 w-2" />
-                                                            )}
-                                                        </div>
+                                                        {(tx.direction === 'in' || tx.direction === 'out') && (
+                                                            <div
+                                                                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
+                                                                    tx.direction === 'in'
+                                                                        ? 'bg-green-500 text-white'
+                                                                        : 'bg-orange-500 text-white'
+                                                                }`}
+                                                            >
+                                                                {tx.direction === 'in' ? (
+                                                                    <ArrowDownLeft className="h-2 w-2" />
+                                                                ) : (
+                                                                    <ArrowUpRight className="h-2 w-2" />
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm">{tx.type}</p>
-                                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                                        <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {getTransactionSubtitle(tx)}
+                                                        </p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         {tx.formattedAmount && (
@@ -309,7 +393,9 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                                 className={`text-sm font-medium ${
                                                                     tx.direction === 'in'
                                                                         ? 'text-green-600'
-                                                                        : 'text-orange-600'
+                                                                        : tx.direction === 'out'
+                                                                          ? 'text-orange-600'
+                                                                          : 'text-muted-foreground'
                                                                 }`}
                                                             >
                                                                 {tx.formattedAmount}

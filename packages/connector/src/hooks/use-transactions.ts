@@ -8,8 +8,12 @@ import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
 import { useConnectorClient } from '../ui/connector-provider';
-import { getTransactionUrl } from '../utils/cluster';
+import { useSharedQuery } from './_internal/use-shared-query';
+import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
+import { getTransactionUrl, getClusterType, type ClusterType } from '../utils/cluster';
 import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
+import type { SolanaClient } from '../lib/kit-utils';
+import { transformImageUrl } from '../utils/image';
 
 export interface TransactionInfo {
     /** Transaction signature */
@@ -23,7 +27,7 @@ export interface TransactionInfo {
     /** Error message if failed */
     error?: string;
     /** Transaction type (if detected) */
-    type: 'sent' | 'received' | 'swap' | 'nft' | 'stake' | 'program' | 'unknown';
+    type: 'sent' | 'received' | 'swap' | 'nft' | 'stake' | 'program' | 'tokenAccountClosed' | 'unknown';
     /** Direction for transfers */
     direction?: 'in' | 'out';
     /** Amount in SOL (for transfers) */
@@ -44,9 +48,33 @@ export interface TransactionInfo {
     formattedTime: string;
     /** Explorer URL */
     explorerUrl: string;
+    /** Swap from token (only for swap transactions) */
+    swapFromToken?: {
+        mint: string;
+        symbol?: string;
+        icon?: string;
+    };
+    /** Swap to token (only for swap transactions) */
+    swapToToken?: {
+        mint: string;
+        symbol?: string;
+        icon?: string;
+    };
+    /** Primary program ID involved in the transaction (best-effort) */
+    programId?: string;
+    /** Friendly name for the primary program if known */
+    programName?: string;
+    /** All program IDs involved in the transaction (best-effort) */
+    programIds?: string[];
+    /** Parsed instruction types (best-effort, only available for some programs in `jsonParsed` mode) */
+    instructionTypes?: string[];
+    /** Number of top-level instructions in the transaction message (best-effort) */
+    instructionCount?: number;
 }
 
 export interface UseTransactionsOptions {
+    /** Whether the hook is enabled (default: true) */
+    enabled?: boolean;
     /** Number of transactions to fetch */
     limit?: number;
     /** Whether to auto-refresh */
@@ -55,6 +83,21 @@ export interface UseTransactionsOptions {
     refreshInterval?: number;
     /** Fetch full transaction details (slower but more info) */
     fetchDetails?: boolean;
+    /**
+     * Max concurrent `getTransaction` RPC calls when `fetchDetails` is true.
+     * Lower this if you see throttling on public RPCs.
+     *
+     * @default 6
+     */
+    detailsConcurrency?: number;
+    /** Time in ms to consider data fresh (default: 0) */
+    staleTimeMs?: number;
+    /** Time in ms to keep cache after unmount (default: 300000) */
+    cacheTimeMs?: number;
+    /** Whether to refetch on mount (default: 'stale') */
+    refetchOnMount?: boolean | 'stale';
+    /** Override the Solana client from provider */
+    client?: SolanaClient | null;
 }
 
 export interface UseTransactionsReturn {
@@ -68,8 +111,10 @@ export interface UseTransactionsReturn {
     hasMore: boolean;
     /** Load more transactions */
     loadMore: () => Promise<void>;
-    /** Refetch transactions */
-    refetch: () => Promise<void>;
+    /** Refetch transactions, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<void>;
+    /** Abort any in-flight transaction fetch */
+    abort: () => void;
     /** Last updated timestamp */
     lastUpdated: Date | null;
 }
@@ -113,6 +158,44 @@ const KNOWN_PROGRAMS: Record<string, string> = {
     Stake11111111111111111111111111111111111111: 'Stake Program',
     metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s: 'Metaplex',
 };
+
+const DEFAULT_IGNORED_PROGRAM_IDS = new Set<string>([
+    '11111111111111111111111111111111', // System Program
+    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // Token Program
+    'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL', // Associated Token
+]);
+
+function resolveProgramName(programId: string, programLabels: Record<string, string> | undefined): string | undefined {
+    return programLabels?.[programId] ?? KNOWN_PROGRAMS[programId];
+}
+
+function pickPrimaryProgramId(programIds: Set<string>): string | undefined {
+    // Prefer the first non-trivial program (exclude System/Token/ATA).
+    for (const id of programIds) {
+        if (!DEFAULT_IGNORED_PROGRAM_IDS.has(id)) return id;
+    }
+    // Fallback to the first program ID (if any).
+    return programIds.values().next().value;
+}
+
+function getParsedInstructionTypes(message: TransactionMessage): string[] | undefined {
+    if (!Array.isArray(message.instructions)) return undefined;
+
+    const types: string[] = [];
+    for (const ix of message.instructions) {
+        if (!ix || typeof ix !== 'object') continue;
+        const parsed = (ix as Instruction).parsed;
+        if (!parsed || typeof parsed !== 'object') continue;
+        if (!('type' in parsed)) continue;
+        const t = (parsed as { type?: unknown }).type;
+        if (typeof t !== 'string') continue;
+        types.push(t);
+        if (types.length >= 10) break;
+    }
+
+    const unique = [...new Set(types)];
+    return unique.length ? unique : undefined;
+}
 
 // TypeScript interfaces for RPC transaction structures
 interface AccountKey {
@@ -259,6 +342,15 @@ function isTransactionMessage(value: unknown): value is TransactionMessage {
     );
 }
 
+function coerceMaybeAddressString(value: unknown): string | undefined {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+        const str = String(value);
+        if (str && str !== '[object Object]') return str;
+    }
+    return undefined;
+}
+
 // Helper functions
 function getAccountKeys(message: TransactionMessage): string[] {
     if (!Array.isArray(message.accountKeys)) {
@@ -352,18 +444,20 @@ function parseTokenTransfers(
     const ourPreTokens = preTokenBalances.filter(balance => {
         if (!isTokenBalance(balance)) return false;
         const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
         return (
             (accountKey && accountKey.trim() === walletAddress.trim()) ||
-            (balance.owner && balance.owner.trim() === walletAddress.trim())
+            (owner && owner.trim() === walletAddress.trim())
         );
     });
 
     const ourPostTokens = postTokenBalances.filter(balance => {
         if (!isTokenBalance(balance)) return false;
         const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
         return (
             (accountKey && accountKey.trim() === walletAddress.trim()) ||
-            (balance.owner && balance.owner.trim() === walletAddress.trim())
+            (owner && owner.trim() === walletAddress.trim())
         );
     });
 
@@ -444,6 +538,150 @@ function parseTokenTransfers(
     return null;
 }
 
+interface ParsedTokenAccountClosure {
+    tokenMint: string;
+}
+
+function parseTokenAccountClosure(
+    meta: TransactionMeta,
+    accountKeys: string[],
+    walletAddress: string,
+): ParsedTokenAccountClosure | null {
+    if (!isTransactionMeta(meta)) {
+        return null;
+    }
+
+    const preTokenBalances = Array.isArray(meta.preTokenBalances) ? meta.preTokenBalances : [];
+    const postTokenBalances = Array.isArray(meta.postTokenBalances) ? meta.postTokenBalances : [];
+
+    const ourPreTokens = preTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (owner && owner.trim() === walletAddress.trim())
+        );
+    });
+
+    const ourPostTokens = postTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (owner && owner.trim() === walletAddress.trim())
+        );
+    });
+
+    const postKeys = new Set<string>();
+    for (const token of ourPostTokens) {
+        if (!isTokenBalance(token)) continue;
+        postKeys.add(`${token.accountIndex}:${token.mint}`);
+    }
+
+    for (const token of ourPreTokens) {
+        if (!isTokenBalance(token)) continue;
+        const key = `${token.accountIndex}:${token.mint}`;
+        if (!postKeys.has(key)) {
+            return { tokenMint: token.mint };
+        }
+    }
+
+    return null;
+}
+
+interface ParsedSwapTokens {
+    fromToken?: { mint: string };
+    toToken?: { mint: string };
+}
+
+function parseSwapTokens(
+    meta: TransactionMeta,
+    accountKeys: string[],
+    walletAddress: string,
+    solChange: number,
+): ParsedSwapTokens {
+    if (!isTransactionMeta(meta)) {
+        return {};
+    }
+
+    const preTokenBalances = Array.isArray(meta.preTokenBalances) ? meta.preTokenBalances : [];
+    const postTokenBalances = Array.isArray(meta.postTokenBalances) ? meta.postTokenBalances : [];
+
+    // Filter token balances for our wallet
+    const ourPreTokens = preTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (owner && owner.trim() === walletAddress.trim())
+        );
+    });
+
+    const ourPostTokens = postTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        const owner = coerceMaybeAddressString(balance.owner);
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (owner && owner.trim() === walletAddress.trim())
+        );
+    });
+
+    // Collect all unique mints
+    const allMints = new Set<string>();
+    for (const token of ourPreTokens) {
+        if (isTokenBalance(token)) {
+            allMints.add(token.mint);
+        }
+    }
+    for (const token of ourPostTokens) {
+        if (isTokenBalance(token)) {
+            allMints.add(token.mint);
+        }
+    }
+
+    // Find tokens that decreased (from) and increased (to)
+    let fromToken: { mint: string } | undefined;
+    let toToken: { mint: string } | undefined;
+
+    for (const mint of allMints) {
+        const preBal = ourPreTokens.find(b => isTokenBalance(b) && b.mint === mint);
+        const postBal = ourPostTokens.find(b => isTokenBalance(b) && b.mint === mint);
+
+        const preAmount =
+            isTokenBalance(preBal) && isUiTokenAmount(preBal.uiTokenAmount) ? Number(preBal.uiTokenAmount.amount) : 0;
+        const postAmount =
+            isTokenBalance(postBal) && isUiTokenAmount(postBal.uiTokenAmount)
+                ? Number(postBal.uiTokenAmount.amount)
+                : 0;
+
+        const change = postAmount - preAmount;
+
+        if (change < 0 && !fromToken) {
+            // Token decreased - this is the "from" token
+            fromToken = { mint };
+        } else if (change > 0 && !toToken) {
+            // Token increased - this is the "to" token
+            toToken = { mint };
+        }
+    }
+
+    // Handle SOL as from/to token (wrapped SOL mint)
+    const WRAPPED_SOL_MINT = 'So11111111111111111111111111111111111111112';
+    if (solChange < -0.001 && !fromToken) {
+        // SOL decreased significantly (more than just fees)
+        fromToken = { mint: WRAPPED_SOL_MINT };
+    } else if (solChange > 0.001 && !toToken) {
+        // SOL increased
+        toToken = { mint: WRAPPED_SOL_MINT };
+    }
+
+    return { fromToken, toToken };
+}
+
 function formatAmount(
     tokenAmount: number | undefined,
     tokenDecimals: number | undefined,
@@ -463,57 +701,65 @@ function formatAmount(
     return undefined;
 }
 
-// Cache for token metadata
-const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
-
-/**
- * Transform an image URL through a proxy if configured
- */
-function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
-    if (!url) return undefined;
-    if (!imageProxy) return url;
-    return `${imageProxy}${encodeURIComponent(url)}`;
+function throwIfAborted(signal: AbortSignal | undefined): void {
+    if (!signal?.aborted) return;
+    throw new DOMException('Query aborted', 'AbortError');
 }
 
 /**
- * Fetch token metadata from Solana Token List API for transaction display
+ * Clamp an integer to a safe range.
  */
-async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol: string; icon: string }>> {
-    const results = new Map<string, { symbol: string; icon: string }>();
-    if (mints.length === 0) return results;
+function clampInt(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, Math.floor(value)));
+}
 
-    // Check cache
-    const uncachedMints: string[] = [];
-    for (const mint of mints) {
-        const cached = tokenMetadataCache.get(mint);
-        if (cached) {
-            results.set(mint, cached);
-        } else {
-            uncachedMints.push(mint);
+/**
+ * Run async work over a list with bounded concurrency.
+ * Preserves input order.
+ */
+async function mapWithConcurrency<TIn, TOut>(
+    inputs: readonly TIn[],
+    worker: (input: TIn, index: number) => Promise<TOut>,
+    options: { concurrency: number; signal?: AbortSignal },
+): Promise<TOut[]> {
+    const concurrency = clampInt(options.concurrency, 1, 32);
+    const results = new Array<TOut>(inputs.length);
+    let nextIndex = 0;
+
+    async function run(): Promise<void> {
+        while (true) {
+            throwIfAborted(options.signal);
+            const index = nextIndex;
+            nextIndex += 1;
+            if (index >= inputs.length) return;
+            results[index] = await worker(inputs[index], index);
         }
     }
 
-    if (uncachedMints.length === 0) return results;
+    const runners = Array.from({ length: Math.min(concurrency, inputs.length) }, () => run());
+    await Promise.all(runners);
+    return results;
+}
 
-    try {
-        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ addresses: uncachedMints }),
-            signal: AbortSignal.timeout(5000),
-        });
+/**
+ * Fetch token metadata for transaction display (shared token-list cache).
+ */
+async function fetchTransactionTokenMetadata(
+    mints: string[],
+    options: { signal?: AbortSignal; cluster?: ClusterType } = {},
+): Promise<Map<string, { symbol: string; icon: string }>> {
+    const results = new Map<string, { symbol: string; icon: string }>();
+    if (!mints.length) return results;
 
-        if (!response.ok) return results;
+    const tokenList = await fetchSolanaTokenListMetadata(mints, {
+        timeoutMs: 5000,
+        signal: options.signal,
+        cluster: options.cluster,
+    });
 
-        const data: { content: Array<{ address: string; symbol: string; logoURI: string }> } = await response.json();
-
-        for (const item of data.content) {
-            const metadata = { symbol: item.symbol, icon: item.logoURI };
-            results.set(item.address, metadata);
-            tokenMetadataCache.set(item.address, metadata);
-        }
-    } catch (error) {
-        console.warn('[useTransactions] Failed to fetch token metadata:', error);
+    for (const [mint, meta] of tokenList) {
+        results.set(mint, { symbol: meta.symbol, icon: meta.logoURI });
     }
 
     return results;
@@ -543,27 +789,37 @@ async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol
  * ```
  */
 export function useTransactions(options: UseTransactionsOptions = {}): UseTransactionsReturn {
-    const { limit = 10, autoRefresh = false, refreshInterval = 60000, fetchDetails = true } = options;
+    const {
+        enabled = true,
+        limit = 10,
+        autoRefresh = false,
+        refreshInterval = 60000,
+        fetchDetails = true,
+        detailsConcurrency = 6,
+        staleTimeMs = 0,
+        cacheTimeMs = 5 * 60 * 1000, // 5 minutes
+        refetchOnMount = 'stale',
+        client: clientOverride,
+    } = options;
 
     const { address, connected } = useAccount();
     const { cluster } = useCluster();
-    const client = useSolanaClient();
+    const { client: providerClient } = useSolanaClient();
     const connectorClient = useConnectorClient();
 
-    const [transactions, setTransactions] = useState<TransactionInfo[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    // Pagination state (local, not shared)
+    const [paginatedTransactions, setPaginatedTransactions] = useState<TransactionInfo[]>([]);
+    const [isPaginationLoading, setIsPaginationLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const beforeSignatureRef = useRef<string | undefined>(undefined);
-    const prevDepsRef = useRef<{ connected: boolean; address: string | null; cluster: SolanaCluster | null } | null>(
-        null,
-    );
 
-    // Extract the actual client to use as a stable dependency
-    const rpcClient = client?.client ?? null;
+    // Use override client if provided, otherwise use provider client
+    const rpcClient = clientOverride ?? providerClient;
+
     // Get imageProxy from connector config
-    const imageProxy = connectorClient?.getConfig().imageProxy;
+    const connectorConfig = connectorClient?.getConfig();
+    const imageProxy = connectorConfig?.imageProxy;
+    const programLabels = connectorConfig?.programLabels;
 
     const parseTransaction = useCallback(
         (
@@ -583,9 +839,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 slot,
                 status: err ? 'failed' : 'success',
                 error: err
-                    ? JSON.stringify(err, (_key, value) =>
-                          typeof value === 'bigint' ? value.toString() : value,
-                      )
+                    ? JSON.stringify(err, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))
                     : undefined,
                 type: 'unknown',
                 formattedDate: date,
@@ -638,6 +892,29 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 const hasSystemProgram = programIds.has('11111111111111111111111111111111');
                 const hasTokenProgram = programIds.has('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
+                // Precompute token program derived signals (used for transfers and closures)
+                const tokenTransfer = hasTokenProgram ? parseTokenTransfers(meta, accountKeys, walletAddress) : null;
+                const tokenAccountClosure = hasTokenProgram
+                    ? parseTokenAccountClosure(meta, accountKeys, walletAddress)
+                    : null;
+
+                // Infer swap tokens from balance deltas (works even when program IDs are unknown)
+                const inferredSwapTokens = parseSwapTokens(meta, accountKeys, walletAddress, solChange);
+                const inferredSwapFromMint = inferredSwapTokens.fromToken?.mint;
+                const inferredSwapToMint = inferredSwapTokens.toToken?.mint;
+                const hasNonTrivialProgram = [...programIds].some(id => !DEFAULT_IGNORED_PROGRAM_IDS.has(id));
+                const hasInferredSwap =
+                    Boolean(inferredSwapFromMint && inferredSwapToMint) &&
+                    inferredSwapFromMint !== inferredSwapToMint &&
+                    hasNonTrivialProgram &&
+                    !tokenAccountClosure;
+
+                const programId = pickPrimaryProgramId(programIds);
+                const programName = programId ? resolveProgramName(programId, programLabels) : undefined;
+                const programIdsArray = [...programIds];
+                const instructionTypes = getParsedInstructionTypes(message);
+                const instructionCount = Array.isArray(message.instructions) ? message.instructions.length : undefined;
+
                 // Determine transaction type
                 let type: TransactionInfo['type'] = 'unknown';
                 let direction: 'in' | 'out' | undefined;
@@ -645,13 +922,32 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 let tokenMint: string | undefined;
                 let tokenAmount: number | undefined;
                 let tokenDecimals: number | undefined;
+                let swapFromToken: TransactionInfo['swapFromToken'];
+                let swapToToken: TransactionInfo['swapToToken'];
 
                 if (hasJupiter || hasOrca || hasRaydium) {
                     type = 'swap';
+                    // Parse swap tokens
+                    if (inferredSwapTokens.fromToken) swapFromToken = { mint: inferredSwapTokens.fromToken.mint };
+                    if (inferredSwapTokens.toToken) swapToToken = { mint: inferredSwapTokens.toToken.mint };
                 } else if (hasStake) {
                     type = 'stake';
                 } else if (hasMetaplex) {
                     type = 'nft';
+                } else if (hasInferredSwap) {
+                    type = 'swap';
+                    swapFromToken = { mint: inferredSwapFromMint! };
+                    swapToToken = { mint: inferredSwapToMint! };
+                } else if (tokenTransfer) {
+                    type = tokenTransfer.type;
+                    direction = tokenTransfer.direction;
+                    tokenMint = tokenTransfer.tokenMint;
+                    tokenAmount = tokenTransfer.tokenAmount;
+                    tokenDecimals = tokenTransfer.tokenDecimals;
+                } else if (tokenAccountClosure) {
+                    type = 'tokenAccountClosed';
+                    tokenMint = tokenAccountClosure.tokenMint;
+                    direction = solChange > 0 ? 'in' : undefined;
                 } else if (hasSystemProgram && Math.abs(balanceChange) > 0) {
                     // Simple SOL transfer
                     type = balanceChange > 0 ? 'received' : 'sent';
@@ -664,17 +960,6 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                         counterparty = accountKeys.find(
                             (key, idx) => idx !== walletIndex && key !== '11111111111111111111111111111111',
                         );
-                    }
-                } else if (hasTokenProgram) {
-                    // Token transfer - parse using helper
-                    const tokenTransfer = parseTokenTransfers(meta, accountKeys, walletAddress);
-
-                    if (tokenTransfer) {
-                        type = tokenTransfer.type;
-                        direction = tokenTransfer.direction;
-                        tokenMint = tokenTransfer.tokenMint;
-                        tokenAmount = tokenTransfer.tokenAmount;
-                        tokenDecimals = tokenTransfer.tokenDecimals;
                     }
                 } else if (programIds.size > 0) {
                     type = 'program';
@@ -691,199 +976,290 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                     formattedAmount,
                     tokenMint,
                     counterparty: counterparty ? `${counterparty.slice(0, 4)}...${counterparty.slice(-4)}` : undefined,
+                    swapFromToken,
+                    swapToToken,
+                    programId,
+                    programName,
+                    programIds: programIdsArray.length ? programIdsArray : undefined,
+                    instructionTypes,
+                    instructionCount,
                 };
             } catch (parseError) {
                 console.warn('Failed to parse transaction:', parseError);
                 return baseInfo;
             }
         },
-        [],
+        [programLabels],
     );
 
-    const fetchTransactions = useCallback(
-        async (loadMore = false) => {
-            if (!connected || !address || !rpcClient || !cluster) {
-                setTransactions([]);
-                return;
+    // Generate cache key based on RPC URL, address, cluster, and options
+    const key = useMemo(() => {
+        if (!enabled || !connected || !address || !rpcClient || !cluster) return null;
+        const rpcUrl =
+            rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
+        return JSON.stringify(['wallet-transactions', rpcUrl, address, cluster.id, limit, fetchDetails]);
+    }, [enabled, connected, address, rpcClient, cluster, limit, fetchDetails]);
+
+    // Reset pagination immediately when the query key changes.
+    // This prevents "old paginated transactions" flashing while the new key loads.
+    useEffect(() => {
+        beforeSignatureRef.current = undefined;
+        setPaginatedTransactions([]);
+        setIsPaginationLoading(false);
+        setHasMore(true);
+    }, [key]);
+
+    // Helper to fetch and enrich transactions
+    const fetchAndEnrichTransactions = useCallback(
+        async (
+            beforeSignature: string | undefined,
+            currentCluster: SolanaCluster,
+            signal?: AbortSignal,
+        ): Promise<{ transactions: TransactionInfo[]; hasMore: boolean }> => {
+            if (!rpcClient || !address) {
+                return { transactions: [], hasMore: false };
             }
 
-            setIsLoading(true);
-            setError(null);
+            throwIfAborted(signal);
 
-            try {
-                const rpc = rpcClient.rpc;
-                const walletAddress = toAddress(address);
+            const rpc = rpcClient.rpc;
+            const walletAddress = toAddress(address);
 
-                const signaturesResult = await rpc
-                    .getSignaturesForAddress(walletAddress, {
-                        limit,
-                        ...(loadMore && beforeSignatureRef.current
-                            ? { before: toSignature(beforeSignatureRef.current) }
-                            : {}),
-                    })
-                    .send();
+            const signaturesResult = await rpc
+                .getSignaturesForAddress(walletAddress, {
+                    limit,
+                    ...(beforeSignature ? { before: toSignature(beforeSignature) } : {}),
+                })
+                .send();
 
-                let newTransactions: TransactionInfo[];
+            throwIfAborted(signal);
 
-                if (fetchDetails && signaturesResult.length > 0) {
-                    // Fetch full transaction details in parallel
-                    const txPromises = signaturesResult.map(s =>
+            let newTransactions: TransactionInfo[];
+
+            if (fetchDetails && signaturesResult.length > 0) {
+                // Fetch full transaction details with bounded concurrency (prevents RPC throttling).
+                const txDetails = await mapWithConcurrency(
+                    signaturesResult,
+                    async sig =>
                         rpc
-                            .getTransaction(toSignature(String(s.signature)), {
+                            .getTransaction(toSignature(String(sig.signature)), {
                                 encoding: 'jsonParsed',
                                 maxSupportedTransactionVersion: 0,
                             })
                             .send()
                             .catch(() => null),
+                    { concurrency: detailsConcurrency, signal },
+                );
+
+                throwIfAborted(signal);
+
+                newTransactions = signaturesResult.map((sig, idx) => {
+                    const blockTimeNum = sig.blockTime ? Number(sig.blockTime) : null;
+                    const tx = txDetails[idx];
+
+                    return parseTransaction(
+                        tx,
+                        address,
+                        String(sig.signature),
+                        blockTimeNum,
+                        Number(sig.slot),
+                        sig.err,
+                        getTransactionUrl(String(sig.signature), currentCluster),
                     );
+                });
+            } else {
+                // Basic info only
+                newTransactions = signaturesResult.map(sig => {
+                    const blockTimeNum = sig.blockTime ? Number(sig.blockTime) : null;
+                    const { date, time } = formatDate(blockTimeNum);
 
-                    const txDetails = await Promise.all(txPromises);
-
-                    newTransactions = signaturesResult.map((sig, idx) => {
-                        const blockTimeNum = sig.blockTime ? Number(sig.blockTime) : null;
-                        const tx = txDetails[idx];
-
-                        return parseTransaction(
-                            tx,
-                            address,
-                            String(sig.signature),
-                            blockTimeNum,
-                            Number(sig.slot),
-                            sig.err,
-                            getTransactionUrl(String(sig.signature), cluster),
-                        );
-                    });
-                } else {
-                    // Basic info only
-                    newTransactions = signaturesResult.map(sig => {
-                        const blockTimeNum = sig.blockTime ? Number(sig.blockTime) : null;
-                        const { date, time } = formatDate(blockTimeNum);
-
-                        return {
-                            signature: String(sig.signature),
-                            blockTime: blockTimeNum,
-                            slot: Number(sig.slot),
-                            status: sig.err ? ('failed' as const) : ('success' as const),
-                            error: sig.err ? JSON.stringify(sig.err) : undefined,
-                            type: 'unknown' as const,
-                            formattedDate: date,
-                            formattedTime: time,
-                            explorerUrl: getTransactionUrl(String(sig.signature), cluster),
-                        };
-                    });
-                }
-
-                // Set transactions immediately for fast UI
-                if (loadMore) {
-                    setTransactions(prev => [...prev, ...newTransactions]);
-                } else {
-                    setTransactions(newTransactions);
-                }
-
-                // Fetch token metadata for transactions that have token mints
-                const mintsToFetch = [...new Set(newTransactions.filter(tx => tx.tokenMint).map(tx => tx.tokenMint!))];
-
-                if (mintsToFetch.length > 0) {
-                    const tokenMetadata = await fetchTokenMetadata(mintsToFetch);
-
-                    // Update transactions with token metadata
-                    if (tokenMetadata.size > 0) {
-                        const enrichedTransactions = newTransactions.map(tx => {
-                            if (tx.tokenMint && tokenMetadata.has(tx.tokenMint)) {
-                                const meta = tokenMetadata.get(tx.tokenMint)!;
-                                return {
-                                    ...tx,
-                                    tokenSymbol: meta.symbol,
-                                    tokenIcon: transformImageUrl(meta.icon, imageProxy),
-                                    // Update formatted amount with symbol
-                                    formattedAmount: tx.formattedAmount
-                                        ? `${tx.formattedAmount} ${meta.symbol}`
-                                        : tx.formattedAmount,
-                                };
-                            }
-                            return tx;
-                        });
-
-                        if (loadMore) {
-                            setTransactions(prev => {
-                                // Replace only the newly loaded transactions
-                                const oldTransactions = prev.slice(0, -newTransactions.length);
-                                return [...oldTransactions, ...enrichedTransactions];
-                            });
-                        } else {
-                            setTransactions(enrichedTransactions);
-                        }
-                    }
-                }
-
-                // Update pagination
-                if (typeof newTransactions !== 'undefined' && Array.isArray(newTransactions)) {
-                    if (newTransactions.length > 0) {
-                        const newBeforeSignature = newTransactions[newTransactions.length - 1].signature;
-                        beforeSignatureRef.current = newBeforeSignature;
-                    }
-                    setHasMore(newTransactions.length === limit);
-                }
-
-                setLastUpdated(new Date());
-            } catch (err) {
-                setError(err as Error);
-                console.error('Failed to fetch transactions:', err);
-            } finally {
-                setIsLoading(false);
+                    return {
+                        signature: String(sig.signature),
+                        blockTime: blockTimeNum,
+                        slot: Number(sig.slot),
+                        status: sig.err ? ('failed' as const) : ('success' as const),
+                        error: sig.err ? JSON.stringify(sig.err) : undefined,
+                        type: 'unknown' as const,
+                        formattedDate: date,
+                        formattedTime: time,
+                        explorerUrl: getTransactionUrl(String(sig.signature), currentCluster),
+                    };
+                });
             }
+
+            // Fetch token metadata for transactions that have token mints
+            const mintsToFetch = [
+                ...new Set([
+                    ...newTransactions.filter(tx => tx.tokenMint).map(tx => tx.tokenMint!),
+                    ...newTransactions.filter(tx => tx.swapFromToken?.mint).map(tx => tx.swapFromToken!.mint),
+                    ...newTransactions.filter(tx => tx.swapToToken?.mint).map(tx => tx.swapToToken!.mint),
+                ]),
+            ];
+
+            if (mintsToFetch.length > 0) {
+                throwIfAborted(signal);
+
+                const tokenMetadata = await fetchTransactionTokenMetadata(mintsToFetch, {
+                    signal,
+                    cluster: getClusterType(currentCluster),
+                });
+
+                if (tokenMetadata.size > 0) {
+                    newTransactions = newTransactions.map(tx => {
+                        let enrichedTx = { ...tx };
+
+                        if (tx.tokenMint && tokenMetadata.has(tx.tokenMint)) {
+                            const meta = tokenMetadata.get(tx.tokenMint)!;
+                            enrichedTx = {
+                                ...enrichedTx,
+                                tokenSymbol: meta.symbol,
+                                tokenIcon: transformImageUrl(meta.icon, imageProxy),
+                                formattedAmount: tx.formattedAmount
+                                    ? `${tx.formattedAmount} ${meta.symbol}`
+                                    : tx.formattedAmount,
+                            };
+                        }
+
+                        if (tx.swapFromToken?.mint && tokenMetadata.has(tx.swapFromToken.mint)) {
+                            const meta = tokenMetadata.get(tx.swapFromToken.mint)!;
+                            enrichedTx = {
+                                ...enrichedTx,
+                                swapFromToken: {
+                                    ...tx.swapFromToken,
+                                    symbol: meta.symbol,
+                                    icon: transformImageUrl(meta.icon, imageProxy),
+                                },
+                            };
+                        }
+
+                        if (tx.swapToToken?.mint && tokenMetadata.has(tx.swapToToken.mint)) {
+                            const meta = tokenMetadata.get(tx.swapToToken.mint)!;
+                            enrichedTx = {
+                                ...enrichedTx,
+                                swapToToken: {
+                                    ...tx.swapToToken,
+                                    symbol: meta.symbol,
+                                    icon: transformImageUrl(meta.icon, imageProxy),
+                                },
+                            };
+                        }
+
+                        return enrichedTx;
+                    });
+                }
+            }
+
+            return {
+                transactions: newTransactions,
+                hasMore: newTransactions.length === limit,
+            };
         },
-        [connected, address, rpcClient, cluster, limit, fetchDetails, parseTransaction, imageProxy],
+        [rpcClient, address, limit, fetchDetails, detailsConcurrency, parseTransaction, imageProxy],
     );
 
-    const refetch = useCallback(async () => {
-        beforeSignatureRef.current = undefined;
-        await fetchTransactions(false);
-    }, [fetchTransactions]);
+    // Query function for initial page (deduped via useSharedQuery)
+    const queryFn = useCallback(
+        async (signal: AbortSignal): Promise<TransactionInfo[]> => {
+            if (!connected || !address || !rpcClient || !cluster) {
+                return [];
+            }
 
+            // Throw on abort - fetchSharedQuery will preserve previous data
+            throwIfAborted(signal);
+
+            const result = await fetchAndEnrichTransactions(undefined, cluster, signal);
+
+            // Re-check abort after awaited work (prevents publishing results after abort)
+            throwIfAborted(signal);
+
+            return result.transactions;
+        },
+        [connected, address, rpcClient, cluster, fetchAndEnrichTransactions],
+    );
+
+    // Use shared query for initial fetch (deduped across components)
+    const {
+        data: initialTransactions,
+        error,
+        isFetching: isInitialLoading,
+        updatedAt,
+        refetch: sharedRefetch,
+        abort,
+    } = useSharedQuery<TransactionInfo[]>(key, queryFn, {
+        enabled,
+        staleTimeMs,
+        cacheTimeMs,
+        refetchOnMount,
+        refetchIntervalMs: autoRefresh ? refreshInterval : false,
+    });
+
+    // When the initial page changes (refetch/key change), update cursor + hasMore,
+    // and drop any prior pagination results (keeps list consistent).
+    useEffect(() => {
+        if (!initialTransactions) return;
+
+        beforeSignatureRef.current = initialTransactions.length
+            ? initialTransactions[initialTransactions.length - 1].signature
+            : undefined;
+
+        setHasMore(initialTransactions.length === limit);
+        setPaginatedTransactions(prev => (prev.length ? [] : prev));
+    }, [initialTransactions, limit]);
+
+    // Load more transactions (pagination - local only)
     const loadMoreFn = useCallback(async () => {
-        if (hasMore && !isLoading) {
-            await fetchTransactions(true);
+        if (!hasMore || isPaginationLoading || !cluster) return;
+
+        setIsPaginationLoading(true);
+        try {
+            const result = await fetchAndEnrichTransactions(beforeSignatureRef.current, cluster);
+
+            if (result.transactions.length > 0) {
+                beforeSignatureRef.current = result.transactions[result.transactions.length - 1].signature;
+                setPaginatedTransactions(prev => [...prev, ...result.transactions]);
+            }
+            setHasMore(result.hasMore);
+        } catch (err) {
+            console.error('Failed to load more transactions:', err);
+        } finally {
+            setIsPaginationLoading(false);
         }
-    }, [hasMore, isLoading, fetchTransactions]);
+    }, [hasMore, isPaginationLoading, cluster, fetchAndEnrichTransactions]);
 
-    // Fetch on mount and when dependencies change
-    useEffect(() => {
-        const prevDeps = prevDepsRef.current;
-        const currentDeps = { connected, address, cluster };
-
-        // Only reset and fetch if connected, address, or cluster actually changed
-        const shouldReset =
-            !prevDeps ||
-            prevDeps.connected !== connected ||
-            prevDeps.address !== address ||
-            prevDeps.cluster !== cluster;
-
-        if (shouldReset) {
-            prevDepsRef.current = currentDeps;
+    // Wrap refetch to reset pagination
+    const refetch = useCallback(
+        async (opts?: { signal?: AbortSignal }) => {
             beforeSignatureRef.current = undefined;
-            fetchTransactions(false);
-        }
-    }, [connected, address, cluster, fetchTransactions]);
+            setPaginatedTransactions([]);
+            setHasMore(true);
+            await sharedRefetch(opts);
+        },
+        [sharedRefetch],
+    );
 
-    // Auto-refresh
-    useEffect(() => {
-        if (!connected || !autoRefresh) return;
+    // Combine initial transactions with paginated ones
+    const transactions = useMemo(() => {
+        const initial = initialTransactions ?? [];
+        return [...initial, ...paginatedTransactions];
+    }, [initialTransactions, paginatedTransactions]);
 
-        const interval = setInterval(refetch, refreshInterval);
-        return () => clearInterval(interval);
-    }, [connected, autoRefresh, refreshInterval, refetch]);
+    // Combined loading state
+    const isLoading = isInitialLoading || isPaginationLoading;
+
+    // Preserve old behavior: don't surface "refresh failed" errors if we already have data
+    const visibleError = updatedAt ? null : error;
 
     return useMemo(
         () => ({
             transactions,
             isLoading,
-            error,
+            error: visibleError,
             hasMore,
             loadMore: loadMoreFn,
             refetch,
-            lastUpdated,
+            abort,
+            lastUpdated: updatedAt ? new Date(updatedAt) : null,
         }),
-        [transactions, isLoading, error, hasMore, loadMoreFn, refetch, lastUpdated],
+        [transactions, isLoading, visibleError, hasMore, loadMoreFn, refetch, abort, updatedAt],
     );
 }

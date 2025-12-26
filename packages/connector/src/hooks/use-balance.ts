@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { address as toAddress } from '@solana/addresses';
-import { useAccount } from './use-account';
-import { useCluster } from './use-cluster';
-import { useSolanaClient } from './use-kit-solana-client';
+import { useCallback, useMemo } from 'react';
+import { useWalletAssets, type WalletAssetsData, type TokenAccountInfo } from './_internal/use-wallet-assets';
+import { formatLamportsToSolSafe, formatBigIntBalance } from '../utils/formatting';
+import type { SolanaClient } from '../lib/kit-utils';
 
 export interface TokenBalance {
     /** Token mint address */
@@ -23,6 +22,26 @@ export interface TokenBalance {
     logo?: string;
 }
 
+/**
+ * Options for useBalance hook
+ */
+export interface UseBalanceOptions {
+    /** Whether the hook is enabled (default: true) */
+    enabled?: boolean;
+    /** Whether to auto-refresh balance (default: true) */
+    autoRefresh?: boolean;
+    /** Refresh interval in milliseconds (default: 30000) */
+    refreshInterval?: number;
+    /** Time in ms to consider data fresh (default: 0) */
+    staleTimeMs?: number;
+    /** Time in ms to keep cache after unmount (default: 300000) */
+    cacheTimeMs?: number;
+    /** Whether to refetch on mount (default: 'stale') */
+    refetchOnMount?: boolean | 'stale';
+    /** Override the Solana client from provider */
+    client?: SolanaClient | null;
+}
+
 export interface UseBalanceReturn {
     /** SOL balance in SOL (not lamports) */
     solBalance: number;
@@ -36,26 +55,66 @@ export interface UseBalanceReturn {
     isLoading: boolean;
     /** Error if balance fetch failed */
     error: Error | null;
-    /** Refetch balance */
-    refetch: () => Promise<void>;
+    /** Refetch balance, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<void>;
+    /** Abort any in-flight balance fetch */
+    abort: () => void;
     /** Last updated timestamp */
     lastUpdated: Date | null;
 }
 
 const LAMPORTS_PER_SOL = 1_000_000_000n;
 
-function formatSol(lamports: bigint, decimals: number = 4): string {
-    const sol = Number(lamports) / Number(LAMPORTS_PER_SOL);
-    return (
-        sol.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: decimals,
-        }) + ' SOL'
-    );
+/**
+ * Format a token account into a TokenBalance (BigInt-safe)
+ */
+function formatTokenAccount(account: TokenAccountInfo): TokenBalance {
+    const formatted = formatBigIntBalance(account.amount, account.decimals, {
+        maxDecimals: Math.min(account.decimals, 6),
+    });
+
+    return {
+        mint: account.mint,
+        amount: account.amount,
+        decimals: account.decimals,
+        formatted,
+    };
+}
+
+/** Selected data type for balance hook */
+interface BalanceSelection {
+    lamports: bigint;
+    tokens: TokenBalance[];
+}
+
+/**
+ * Select function to transform wallet assets into balance data
+ */
+function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
+    if (!assets) {
+        return { lamports: 0n, tokens: [] };
+    }
+
+    // Filter to only non-zero balances and format
+    const tokens = assets.tokenAccounts.filter(account => account.amount > 0n).map(formatTokenAccount);
+
+    return {
+        lamports: assets.lamports,
+        tokens,
+    };
 }
 
 /**
  * Hook for fetching wallet balance (SOL and tokens).
+ *
+ * Features:
+ * - Automatic request deduplication across components
+ * - Shared data with useTokens (single RPC query)
+ * - Token-2022 support
+ * - Shared polling interval (ref-counted)
+ * - Configurable auto-refresh behavior
+ * - Abort support for in-flight requests
+ * - Optional client override
  *
  * @example Basic usage
  * ```tsx
@@ -64,6 +123,23 @@ function formatSol(lamports: bigint, decimals: number = 4): string {
  *
  *   if (isLoading) return <div>Loading...</div>;
  *   return <div>{formattedSol}</div>;
+ * }
+ * ```
+ *
+ * @example With options
+ * ```tsx
+ * function Balance() {
+ *   const { formattedSol, refetch, abort } = useBalance({
+ *     autoRefresh: false,  // Disable polling
+ *     staleTimeMs: 10000,  // Consider data fresh for 10s
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       {formattedSol}
+ *       <button onClick={() => refetch()}>Refresh</button>
+ *     </div>
+ *   );
  * }
  * ```
  *
@@ -84,112 +160,52 @@ function formatSol(lamports: bigint, decimals: number = 4): string {
  * }
  * ```
  */
-export function useBalance(): UseBalanceReturn {
-    const { address, connected } = useAccount();
-    const { cluster } = useCluster();
-    const client = useSolanaClient();
+export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
+    const {
+        enabled = true,
+        autoRefresh = true,
+        refreshInterval = 30000,
+        staleTimeMs = 0,
+        cacheTimeMs = 5 * 60 * 1000, // 5 minutes
+        refetchOnMount = 'stale',
+        client: clientOverride,
+    } = options;
 
-    const [lamports, setLamports] = useState<bigint>(0n);
-    const [tokens, setTokens] = useState<TokenBalance[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    // Use shared wallet assets with select for reduced rerenders
+    const {
+        data,
+        error,
+        isFetching,
+        updatedAt,
+        refetch: sharedRefetch,
+        abort,
+    } = useWalletAssets<BalanceSelection>({
+        enabled,
+        staleTimeMs,
+        cacheTimeMs,
+        refetchOnMount,
+        refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        client: clientOverride,
+        select: selectBalance,
+    });
 
-    // Track if we have successfully fetched data (for error handling)
-    const hasDataRef = useRef(false);
-
-    // Extract the actual client to use as a stable dependency
-    const rpcClient = client?.client ?? null;
-
-    const fetchBalance = useCallback(async () => {
-        if (!connected || !address || !rpcClient) {
-            setLamports(0n);
-            setTokens([]);
-            hasDataRef.current = false;
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            // Fetch SOL balance using the Kit client
-            const rpc = rpcClient.rpc;
-            const walletAddress = toAddress(address);
-
-            // Get SOL balance
-            const balanceResult = await rpc.getBalance(walletAddress).send();
-            setLamports(balanceResult.value);
-
-            // Fetch token accounts
-            try {
-                const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-                const tokenAccountsResult = await rpc
-                    .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
-                    .send();
-
-                const tokenBalances: TokenBalance[] = [];
-
-                for (const account of tokenAccountsResult.value) {
-                    const parsed = account.account.data as any;
-                    if (parsed?.parsed?.info) {
-                        const info = parsed.parsed.info;
-                        const amount = BigInt(info.tokenAmount?.amount || '0');
-                        const decimals = info.tokenAmount?.decimals || 0;
-                        const formatted = (Number(amount) / Math.pow(10, decimals)).toLocaleString(undefined, {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: Math.min(decimals, 6),
-                        });
-
-                        if (amount > 0n) {
-                            tokenBalances.push({
-                                mint: info.mint,
-                                amount,
-                                decimals,
-                                formatted,
-                            });
-                        }
-                    }
-                }
-
-                setTokens(tokenBalances);
-            } catch (tokenError) {
-                // Token fetch failed but SOL balance succeeded
-                console.warn('Failed to fetch token balances:', tokenError);
-                setTokens([]);
-            }
-
-            hasDataRef.current = true;
-            setLastUpdated(new Date());
-        } catch (err) {
-            // Only set error state if we don't already have balance data
-            // This prevents noisy errors on auto-refresh failures
-            if (!hasDataRef.current) {
-                setError(err as Error);
-                console.error('Failed to fetch balance:', err);
-            }
-            // Silently ignore refresh failures when we already have data
-        } finally {
-            setIsLoading(false);
-        }
-    }, [connected, address, rpcClient]);
-
-    // Fetch on mount and when dependencies change
-    useEffect(() => {
-        fetchBalance();
-    }, [fetchBalance]);
-
-    // Auto-refresh every 30 seconds when connected
-    useEffect(() => {
-        if (!connected) return;
-
-        const interval = setInterval(fetchBalance, 30000);
-        return () => clearInterval(interval);
-    }, [connected, fetchBalance]);
+    const lamports = data?.lamports ?? 0n;
+    const tokens = data?.tokens ?? [];
 
     const solBalance = useMemo(() => Number(lamports) / Number(LAMPORTS_PER_SOL), [lamports]);
 
-    const formattedSol = useMemo(() => formatSol(lamports), [lamports]);
+    const formattedSol = useMemo(() => formatLamportsToSolSafe(lamports, { maxDecimals: 4, suffix: true }), [lamports]);
+
+    // Preserve old behavior: don't surface "refresh failed" errors if we already have data
+    const visibleError = updatedAt ? null : error;
+
+    // Wrap refetch to match expected signature
+    const refetch = useCallback(
+        async (opts?: { signal?: AbortSignal }) => {
+            await sharedRefetch(opts);
+        },
+        [sharedRefetch],
+    );
 
     return useMemo(
         () => ({
@@ -197,11 +213,12 @@ export function useBalance(): UseBalanceReturn {
             lamports,
             formattedSol,
             tokens,
-            isLoading,
-            error,
-            refetch: fetchBalance,
-            lastUpdated,
+            isLoading: isFetching,
+            error: visibleError,
+            refetch,
+            abort,
+            lastUpdated: updatedAt ? new Date(updatedAt) : null,
         }),
-        [solBalance, lamports, formattedSol, tokens, isLoading, error, fetchBalance, lastUpdated],
+        [solBalance, lamports, formattedSol, tokens, isFetching, visibleError, refetch, abort, updatedAt],
     );
 }
