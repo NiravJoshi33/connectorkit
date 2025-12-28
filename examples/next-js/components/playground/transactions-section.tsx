@@ -14,7 +14,7 @@ const transactionExamples: ExampleConfig[] = [
         id: 'legacy-sol-transfer',
         name: 'Legacy Self Transfer',
         description:
-            'Self-transfer 1 lamport using @solana/web3.js v1 with the wallet adapter compatibility layer, visualized as a pipeline (works with the Next.js RPC proxy).',
+            'Self-transfer 1 lamport using @solana/web3.js v1 with the wallet adapter compatibility layer.',
         fileName: 'components/transactions/legacy-sol-transfer.tsx',
         code: `'use client';
 
@@ -134,7 +134,7 @@ export function LegacySolTransfer() {
         id: 'modern-sol-transfer',
         name: 'Modern Self Transfer',
         description:
-            'Self-transfer 1 lamport using @solana/kit (web3.js 2.0) and a kit-compatible signer, visualized as a pipeline (works with the Next.js RPC proxy).',
+            'Self-transfer 1 lamport using @solana/kit with a kit-compatible signer.',
         fileName: 'components/transactions/modern-sol-transfer.tsx',
         code: `'use client';
 
