@@ -80,7 +80,7 @@ export interface WalletConnectConfig {
      * Callback to get the current chain/cluster dynamically.
      * When provided, this is called before each request to determine the chain.
      * This allows WalletConnect to follow the app's cluster selection.
-     * 
+     *
      * @returns The current chain ID (e.g., 'solana:mainnet', 'solana:devnet')
      */
     getCurrentChain?: () => 'solana:mainnet' | 'solana:devnet' | 'solana:testnet';
@@ -124,17 +124,22 @@ export interface WalletConnectTransport {
     disconnect(): Promise<void>;
 
     /** Send a JSON-RPC request to the connected wallet */
-    request<T = unknown>(args: {
-        method: string;
-        params: unknown;
-        chainId?: string;
-    }): Promise<T>;
+    request<T = unknown>(args: { method: string; params: unknown; chainId?: string }): Promise<T>;
 
     /** Check if there's an active session */
     isConnected(): boolean;
 
     /** Get accounts from the current session namespaces (if available) */
     getSessionAccounts(): string[];
+
+    /**
+     * Subscribe to session changes (account changes, session updates).
+     * Returns an unsubscribe function.
+     *
+     * @param listener - Called when session changes (new accounts, etc.)
+     * @returns Unsubscribe function
+     */
+    onSessionChanged?(listener: (accounts: string[]) => void): () => void;
 }
 
 /**

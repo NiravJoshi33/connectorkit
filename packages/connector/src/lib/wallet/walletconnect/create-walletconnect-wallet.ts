@@ -179,12 +179,9 @@ function toWalletAccount(account: WalletConnectSolanaAccount, chains: readonly s
 /**
  * Create a Wallet Standard-compatible wallet that uses WalletConnect
  */
-export function createWalletConnectWallet(
-    config: WalletConnectConfig,
-    transport: WalletConnectTransport,
-): Wallet {
+export function createWalletConnectWallet(config: WalletConnectConfig, transport: WalletConnectTransport): Wallet {
     const chains = (config.defaultChain ? [config.defaultChain] : DEFAULT_CHAINS) as readonly `${string}:${string}`[];
-    
+
     // Function to get the current CAIP chain ID dynamically
     function getCurrentCaipChainId(): string {
         const currentChain = config.getCurrentChain?.() || config.defaultChain || 'solana:mainnet';
@@ -198,7 +195,44 @@ export function createWalletConnectWallet(
         changeListeners.forEach(fn => fn({ accounts }));
     }
 
-    const wallet: Wallet = {
+    /**
+     * Refresh accounts from the session.
+     * Called when transport notifies of session changes.
+     */
+    function refreshAccountsFromSession(sessionAccounts: string[]): void {
+        if (sessionAccounts.length === 0) {
+            // Session cleared - emit with empty accounts
+            accounts = [];
+            emitChange();
+            return;
+        }
+
+        // Convert session accounts to Wallet Standard accounts
+        accounts = sessionAccounts.map(pubkey => toWalletAccount({ pubkey }, chains));
+        emitChange();
+    }
+
+    // Subscribe to session changes from the transport and capture unsubscribe function
+    let unsubscribeSessionChanged: (() => void) | undefined;
+    if (transport.onSessionChanged) {
+        const unsubscribe = transport.onSessionChanged(refreshAccountsFromSession);
+        // Guard for transports that return void (no-op) - store only if it's a function
+        if (typeof unsubscribe === 'function') {
+            unsubscribeSessionChanged = unsubscribe;
+        }
+    }
+
+    /**
+     * Cleanup function to unsubscribe from session changes
+     */
+    function cleanupSessionSubscription(): void {
+        if (unsubscribeSessionChanged) {
+            unsubscribeSessionChanged();
+            unsubscribeSessionChanged = undefined; // Clear reference to avoid double-calls
+        }
+    }
+
+    const wallet: Wallet & { cleanup?: () => void } = {
         version: '1.0.0',
         name: 'WalletConnect',
         icon: WALLETCONNECT_ICON,
@@ -206,6 +240,7 @@ export function createWalletConnectWallet(
         get accounts() {
             return accounts;
         },
+        cleanup: cleanupSessionSubscription,
         features: {
             // Standard connect feature
             'standard:connect': {
@@ -215,7 +250,7 @@ export function createWalletConnectWallet(
 
                     // First, try to get accounts from the session namespaces (most reliable)
                     const sessionAccounts = transport.getSessionAccounts();
-                    
+
                     if (sessionAccounts.length > 0) {
                         accounts = sessionAccounts.map(pubkey => toWalletAccount({ pubkey }, chains));
                         emitChange();
@@ -237,9 +272,8 @@ export function createWalletConnectWallet(
                         firstError = error;
                         // Fallback to the other method
                         try {
-                            const fallbackMethod = method === 'solana_getAccounts' 
-                                ? 'solana_requestAccounts' 
-                                : 'solana_getAccounts';
+                            const fallbackMethod =
+                                method === 'solana_getAccounts' ? 'solana_requestAccounts' : 'solana_getAccounts';
                             result = await transport.request<WalletConnectSolanaAccount[]>({
                                 method: fallbackMethod,
                                 params: {},
@@ -270,6 +304,8 @@ export function createWalletConnectWallet(
             'standard:disconnect': {
                 version: '1.0.0',
                 disconnect: async () => {
+                    // Unsubscribe from session changes before disconnecting
+                    cleanupSessionSubscription();
                     await transport.disconnect();
                     accounts = [];
                     emitChange();
@@ -381,7 +417,7 @@ export function createWalletConnectWallet(
                         }));
                     } catch (error) {
                         // Fallback: sign transactions one by one
-                        
+
                         const signFeature = wallet.features['solana:signTransaction'] as {
                             signTransaction: (args: {
                                 account: WalletAccount;
