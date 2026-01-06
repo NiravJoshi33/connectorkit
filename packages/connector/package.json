@@ -24,9 +24,8 @@
         },
         "./svelte": {
             "types": "./dist/svelte.d.ts",
-            "svelte": "./dist/svelte/index.js",
-            "import": "./dist/svelte.mjs",
-            "require": "./dist/svelte.js"
+            "svelte": "./src/svelte.ts",
+            "default": "./src/svelte.ts"
         },
         "./compat": {
             "types": "./dist/compat.d.ts",
@@ -35,7 +34,8 @@
         }
     },
     "files": [
-        "dist/**"
+        "dist/**",
+        "src/**"
     ],
     "scripts": {
         "build": "tsup",
