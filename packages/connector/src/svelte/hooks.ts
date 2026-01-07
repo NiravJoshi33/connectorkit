@@ -155,10 +155,14 @@ export const useTransactionSigner = () => {
 export const useKitTransactionSigner = () => {
     const { signer } = useTransactionSigner();
 
-    return derived(signer, $signer => {
+    const kitSigner = derived(signer, $signer => {
         if (!$signer) return null;
         return createKitTransactionSigner($signer);
     });
+
+    return {
+        signer: kitSigner,
+    };
 };
 
 interface UseWalletAssetsOptions {
