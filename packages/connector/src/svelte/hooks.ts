@@ -181,7 +181,7 @@ export const useWalletAssets = (options: UseWalletAssetsOptions = {}) => {
         const rpcUrl = client.getRpcUrl();
 
         if (options.enabled === false) return null;
-        if ($connected || !$address || !$cluster || !rpcUrl) return null;
+        if (!$connected || !$address || !$cluster || !rpcUrl) return null;
 
         return JSON.stringify(['wallet-assets', rpcUrl, $address]);
     });
