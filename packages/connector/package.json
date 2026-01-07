@@ -1,6 +1,6 @@
 {
     "name": "@solana/connector",
-    "version": "0.1.7",
+    "version": "0.2.1",
     "description": "Headless wallet connector client and React provider built on Wallet Standard",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
@@ -55,13 +55,17 @@
     "peerDependencies": {
         "@solana/web3.js": "^1.0.0",
         "react": ">=18.0.0",
-        "svelte": "^4.0.0 || ^5.0.0"
+        "svelte": "^4.0.0 || ^5.0.0",
+        "@walletconnect/universal-provider": "^2.0.0"
     },
     "peerDependenciesMeta": {
         "react": {
             "optional": true
         },
         "svelte": {
+            "optional": true
+        },
+        "@walletconnect/universal-provider": {
             "optional": true
         },
         "@solana/connector-debugger": {
@@ -72,7 +76,6 @@
         }
     },
     "dependencies": {
-        "@nanostores/persistent": "^1.1.0",
         "@solana-mobile/wallet-standard-mobile": "^0.4.3",
         "@solana/addresses": "^5.0.0",
         "@solana/codecs": "^5.0.0",
@@ -85,7 +88,8 @@
         "@wallet-standard/app": "^1.1.0",
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",
-        "@wallet-ui/core": "^2.1.0"
+        "@wallet-ui/core": "^2.1.0",
+        "zod": "^4.0.0"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.9.1",

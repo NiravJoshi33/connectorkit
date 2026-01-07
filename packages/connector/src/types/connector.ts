@@ -8,6 +8,8 @@ import type { WalletInfo } from './wallets';
 import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
+import type { WalletConnectConfig } from './walletconnect';
+import type { WalletStatus, WalletConnectorMetadata } from './session';
 
 /**
  * CoinGecko API configuration for price fetching.
@@ -60,12 +62,68 @@ export interface CoinGeckoConfig {
  * Core connector state
  */
 export interface ConnectorState {
+    // ========================================================================
+    // vNext: Wallet Status State Machine
+    // ========================================================================
+
+    /**
+     * Wallet connection status using state machine pattern.
+     * This is the primary way to check wallet state in vNext.
+     *
+     * @example
+     * ```ts
+     * if (state.wallet.status === 'connected') {
+     *   console.log(state.wallet.session.selectedAccount.address);
+     * }
+     * ```
+     */
+    wallet: WalletStatus;
+
+    /**
+     * Available wallet connectors with metadata (serializable).
+     * Use ConnectorClient methods to actually connect.
+     */
+    connectors: WalletConnectorMetadata[];
+
+    // ========================================================================
+    // Legacy Fields (kept for backwards compatibility)
+    // These are derived from `wallet` status - will be removed in future version
+    // ========================================================================
+
+    /**
+     * @deprecated Use `state.connectors` instead. This includes legacy WalletInfo.
+     */
     wallets: WalletInfo[];
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session` instead.
+     */
     selectedWallet: Wallet | null;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected'` instead.
+     */
     connected: boolean;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connecting'` instead.
+     */
     connecting: boolean;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.accounts` instead.
+     */
     accounts: AccountInfo[];
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.selectedAccount.address` instead.
+     */
     selectedAccount: Address | null;
+
+    // ========================================================================
+    // Cluster State (unchanged)
+    // ========================================================================
+
     cluster: SolanaCluster | null;
     clusters: SolanaCluster[];
 }
@@ -115,6 +173,13 @@ export interface ConnectorConfig {
      * Configure API key for higher rate limits and retry behavior for 429 responses.
      */
     coingecko?: CoinGeckoConfig;
+
+    /**
+     * WalletConnect configuration for connecting via QR code / deep link.
+     * When enabled, a "WalletConnect" wallet is registered in the Wallet Standard registry.
+     * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
+     */
+    walletConnect?: WalletConnectConfig;
 }
 
 /**

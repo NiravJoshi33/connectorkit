@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo } from 'react';
 import { address as toAddress } from '@solana/addresses';
-import { useAccount } from '../use-account';
+import { useWallet } from '../use-wallet';
 import { useSolanaClient } from '../use-kit-solana-client';
 import { useSharedQuery } from './use-shared-query';
 import type { SharedQueryOptions } from './use-shared-query';
-import type { SolanaClient } from '../../lib/kit-utils';
+import type { SolanaClient } from '../../lib/kit';
 
 /**
  * Token Program IDs
@@ -152,6 +152,26 @@ function parseTokenAccount(
 }
 
 /**
+ * Generate the query key for wallet assets.
+ * Use this to invalidate the cache externally.
+ *
+ * @param rpcUrl - The RPC URL being used
+ * @param address - The wallet address
+ * @returns The stringified query key, or null if params are invalid
+ *
+ * @example
+ * ```tsx
+ * // Invalidate wallet assets after a transaction
+ * const key = getWalletAssetsQueryKey(rpcUrl, address);
+ * if (key) invalidateSharedQuery(key);
+ * ```
+ */
+export function getWalletAssetsQueryKey(rpcUrl: string | null, address: string | null): string | null {
+    if (!rpcUrl || !address) return null;
+    return JSON.stringify(['wallet-assets', rpcUrl, address]);
+}
+
+/**
  * Internal hook that fetches both SOL balance and all token accounts.
  * Queries both Token Program and Token-2022 in parallel.
  *
@@ -187,7 +207,8 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         select,
     } = options;
 
-    const { address, connected } = useAccount();
+    const { account, isConnected } = useWallet();
+    const address = account ? String(account) : null;
     const { client: providerClient } = useSolanaClient();
 
     // Use override client if provided, otherwise use provider client
@@ -196,16 +217,16 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
     // Generate cache key based on RPC URL and address only
     // This ensures useBalance and useTokens share the same cache entry
     const key = useMemo(() => {
-        if (!enabled || !connected || !address || !rpcClient) return null;
+        if (!enabled || !isConnected || !address || !rpcClient) return null;
         const rpcUrl =
             rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
-        return JSON.stringify(['wallet-assets', rpcUrl, address]);
-    }, [enabled, connected, address, rpcClient]);
+        return getWalletAssetsQueryKey(rpcUrl, address);
+    }, [enabled, isConnected, address, rpcClient]);
 
     // Query function that fetches SOL balance and all token accounts
     const queryFn = useCallback(
         async (signal: AbortSignal): Promise<WalletAssetsData> => {
-            if (!connected || !address || !rpcClient) {
+            if (!isConnected || !address || !rpcClient) {
                 return { lamports: 0n, tokenAccounts: [] };
             }
 
@@ -262,7 +283,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
                 tokenAccounts,
             };
         },
-        [connected, address, rpcClient],
+        [isConnected, address, rpcClient],
     );
 
     // Use shared query with optional select
