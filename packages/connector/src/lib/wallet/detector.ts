@@ -85,10 +85,12 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
  * WalletDetector - Handles wallet discovery and registry management
  *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
+ * Supports additional wallets (e.g., remote signers) via `setAdditionalWallets()`.
  * Maintains a stable connector ID -> Wallet mapping for vNext APIs.
  */
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
+    private additionalWallets: Wallet[] = [];
     /** Map from stable connector ID to Wallet reference (not stored in state) */
     private connectorRegistry = new Map<WalletConnectorId, Wallet>();
 
@@ -98,6 +100,60 @@ export class WalletDetector extends BaseCollaborator {
         debug = false,
     ) {
         super({ stateManager, eventEmitter, debug }, 'WalletDetector');
+    }
+
+    /**
+     * Set additional wallets to include alongside Wallet Standard wallets.
+     * These wallets (e.g., remote signers) will be merged with detected wallets.
+     *
+     * @param wallets - Array of Wallet Standard compatible wallets
+     */
+    setAdditionalWallets(wallets: Wallet[]): void {
+        this.additionalWallets = wallets;
+        // Re-run detection to merge new wallets
+        this.refreshWallets();
+    }
+
+    /**
+     * Get additional wallets that have been configured
+     */
+    getAdditionalWallets(): Wallet[] {
+        return this.additionalWallets;
+    }
+
+    /**
+     * Refresh wallet list (re-detect and merge)
+     */
+    private refreshWallets(): void {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const walletsApi = getWalletsRegistry();
+            const ws = walletsApi.get();
+
+            // - Only include Solana wallets (Wallet Standard supports multi-chain registries)
+            // - If multiple wallets share the same name (e.g. multi-chain variants), prefer the Solana one
+            //   by filtering to solana:* first, then deduplicating by name.
+            const registryWallets = ws.filter(isSolanaWallet);
+            const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
+            const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
+
+            // Update connector registry (connectorId -> Wallet map)
+            this.updateConnectorRegistry(unique);
+
+            this.stateManager.updateState({
+                wallets: unique.map(w => this.mapToWalletInfo(w)),
+                connectors: unique.map(w => this.mapToConnectorMetadata(w)),
+            });
+
+            this.log('🔍 WalletDetector: refreshed wallets', {
+                registry: registryWallets.length,
+                additional: additionalWallets.length,
+                total: unique.length,
+            });
+        } catch {
+            // Ignore errors during refresh
+        }
     }
 
     /**
@@ -117,18 +173,22 @@ export class WalletDetector extends BaseCollaborator {
             const walletsApi = getWalletsRegistry();
             const update = () => {
                 const ws = walletsApi.get();
+                const previousCount = this.getState().wallets.length;
 
                 // - Only include Solana wallets (Wallet Standard supports multi-chain registries)
                 // - If multiple wallets share the same name (e.g. multi-chain variants), prefer the Solana one
                 //   by filtering to solana:* first, then deduplicating by name.
-                const solanaWallets = ws.filter(isSolanaWallet);
-                const unique = this.deduplicateWallets(solanaWallets);
-
-                const previousCount = this.getState().wallets.length;
+                const registryWallets = ws.filter(isSolanaWallet);
+                const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
+                const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
                 const newCount = unique.length;
 
                 if (newCount !== previousCount) {
-                    this.log('🔍 WalletDetector: found wallets:', newCount);
+                    this.log('🔍 WalletDetector: found wallets:', {
+                        registry: registryWallets.length,
+                        additional: additionalWallets.length,
+                        total: newCount,
+                    });
                 }
 
                 // Update connector registry (connectorId -> Wallet map)

@@ -1,6 +1,7 @@
 import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
 import type { WalletConnectConfig } from '../types/walletconnect';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
+import type { Wallet } from '../types/wallets';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
 import {
     createEnhancedStorageAccount,
@@ -98,6 +99,12 @@ export interface DefaultConfigOptions {
      * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
      */
     walletConnect?: boolean | SimplifiedWalletConnectConfig;
+
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     */
+    additionalWallets?: Wallet[];
 }
 
 /**
@@ -185,6 +192,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         programLabels,
         coingecko,
         walletConnect,
+        additionalWallets,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -291,6 +299,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         programLabels,
         coingecko,
         walletConnect: walletConnectConfig,
+        additionalWallets,
     };
 
     return config;

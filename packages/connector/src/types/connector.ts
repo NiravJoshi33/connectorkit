@@ -180,6 +180,12 @@ export interface ConnectorConfig {
      * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
      */
     walletConnect?: WalletConnectConfig;
+
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     */
+    additionalWallets?: Wallet[];
 }
 
 /**
